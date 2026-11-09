@@ -1,0 +1,10 @@
+node_modules/
+downloads/
+bin/
+.venv/
+.env
+server.log
+*.log
+.DS_Store
+*.log
+.DS_Store

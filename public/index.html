@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MEDIA DOWNLOADER</title>
+<style>
+  :root {
+    --white: #ffffff;
+    --gray-1: #f0f0f0;
+    --gray-2: #d0d0d0;
+    --gray-3: #808080;
+    --gray-4: #404040;
+    --black: #0a0a0a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--black); color: var(--gray-1); font-family: "SF Mono", "Cascadia Code", ui-monospace, monospace; }
+  body { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
+  a { color: var(--gray-1); text-decoration: underline; text-underline-offset: 3px; }
+
+  header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--gray-4); padding-bottom: 16px; margin-bottom: 32px; }
+  h1 { font-size: 14px; letter-spacing: 4px; font-weight: 600; text-transform: uppercase; }
+  header .stat { font-size: 11px; color: var(--gray-3); }
+
+  section { margin-bottom: 36px; }
+  .label { font-size: 10px; letter-spacing: 3px; color: var(--gray-3); text-transform: uppercase; margin-bottom: 10px; }
+
+  .row { display: flex; gap: 8px; }
+  input, select {
+    background: var(--black); color: var(--gray-1); border: 1px solid var(--gray-4);
+    padding: 10px 12px; font: inherit; font-size: 13px; border-radius: 0; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--gray-1); }
+  #url { flex: 1; }
+
+  button {
+    font: inherit; font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    background: var(--gray-1); color: var(--black); border: 1px solid var(--gray-1);
+    padding: 10px 16px; cursor: pointer; border-radius: 0;
+  }
+  button:hover { background: var(--black); color: var(--gray-1); }
+  button:disabled { background: var(--gray-4); border-color: var(--gray-4); color: var(--black); cursor: not-allowed; }
+  button.ghost { background: transparent; color: var(--gray-1); border-color: var(--gray-4); }
+  button.ghost:hover { border-color: var(--gray-1); background: var(--gray-1); color: var(--black); }
+
+  #meta { display: none; border: 1px solid var(--gray-4); padding: 16px; margin-top: 12px; }
+  #meta .thumb-wrap { float: right; width: 176px; margin: 0 0 8px 16px; }
+  #meta img { width: 100%; display: block; filter: grayscale(1) contrast(1.05); border: 1px solid var(--gray-4); }
+  #meta h2 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  #meta .sub { font-size: 11px; color: var(--gray-3); margin-bottom: 4px; }
+  #meta .desc { font-size: 11px; color: var(--gray-3); margin-top: 8px; max-height: 54px; overflow: hidden; }
+  #formats { margin-top: 16px; width: 100%; border-collapse: collapse; font-size: 11px; }
+  #formats th { text-align: left; color: var(--gray-3); font-weight: 400; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid var(--gray-4); padding: 4px 8px 4px 0; }
+  #formats td { padding: 3px 8px 3px 0; border-bottom: 1px solid var(--gray-4); color: var(--gray-2); }
+
+  #controls { display: none; margin-top: 16px; }
+  .bar { height: 6px; background: var(--gray-4); margin: 8px 0 6px; position: relative; overflow: hidden; }
+  .bar > i { position: absolute; inset: 0; width: 0%; background: var(--gray-1); transition: width .5s; }
+  .pct { font-size: 11px; color: var(--gray-3); display: flex; justify-content: space-between; }
+
+  #jobs .job { border: 1px solid var(--gray-4); padding: 12px 16px; margin-bottom: 10px; }
+  #jobs .top { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
+  #jobs .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #jobs .side { color: var(--gray-3); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+  #jobs .ops { margin-top: 8px; display: flex; gap: 8px; }
+  #jobs button { padding: 5px 10px; font-size: 10px; }
+  .empty { font-size: 11px; color: var(--gray-3); }
+  code { color: var(--gray-3); font-size: 11px; }
+  .ok   { color: var(--white); }
+  .dim  { color: var(--gray-3); }
+  .err  { color: var(--white); font-style: italic; }
+  footer { margin-top: 64px; border-top: 1px solid var(--gray-4); padding-top: 12px; font-size: 10px; color: var(--gray-3); letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Media Downloader</h1>
+  <span class="stat" id="stat">yt-dlp</span>
+</header>
+
+<section>
+  <div class="label">Source URL</div>
+  <form id="form">
+    <div class="row">
+      <input id="url" type="url" placeholder="paste any video / audio url" autocomplete="off" required>
+      <button type="submit" id="inspect">Inspect</button>
+    </div>
+  </form>
+
+  <div id="meta">
+    <div class="thumb-wrap"><img id="thumb" alt=""></div>
+    <h2 id="mtitle"></h2>
+    <div class="sub" id="msub"></div>
+    <div class="desc" id="mdesc"></div>
+    <table id="formats">
+      <thead><tr><th>id</th><th>ext</th><th>resolution</th><th>size</th><th>note</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="controls">
+    <div class="label" style="margin-top:18px">Download</div>
+    <div class="row">
+      <select id="format">
+        <option value="mp4">mp4 (video+mux)</option>
+        <option value="webm">webm (video)</option>
+        <option value="mp3">mp3 (audio)</option>
+        <option value="m4a">m4a (audio)</option>
+        <option value="audio">opus (audio)</option>
+      </select>
+      <select id="quality">
+        <option>best</option><option>2160</option><option>1440</option>
+        <option selected>1080</option><option>720</option>
+        <option>480</option><option>360</option>
+      </select>
+      <button id="go">Queue ▸</button>
+    </div>
+    <div class="bar"><i id="barfill"></i></div>
+    <div class="pct"><span id="pstate">idle</span><span id="pspeed"></span></div>
+  </div>
+</section>
+
+<section>
+  <div class="label">Jobs</div>
+  <div id="jobs"><div class="empty">no jobs yet</div></div>
+</section>
+
+<footer>engine: yt-dlp + ffmpeg · api also on /api/info · /api/download · /api/jobs · use responsibly</footer>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const currentUrl = () => {
+  try { const u = new URL($('url').value.trim()); if (!/^https?:$/.test(u.protocol)) throw 0; return u.href; }
+  catch { return null; }
+};
+const csrfKey = () => $('x-api-key')?.value || '';
+
+/* health/heartbeat */
+async function tick() {
+  try {
+    const h = await (await fetch('/api/health')).json();
+    $('stat').textContent = `queue ${h.queueDepth} · running ${h.running} · active ${h.active}`;
+  } catch { $('stat').textContent = 'offline'; }
+}
+setInterval(tick, 4000); tick();
+
+/* inspect */
+$('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const url = currentUrl(); if (!url) return alert('invalid url');
+  $('inspect').disabled = true; $('inspect').textContent = 'loading…';
+  try {
+    const res = await fetch('/api/info?url=' + encodeURIComponent(url));
+    const info = await res.clone().json();
+    if (info.error) throw new Error(info.error + (info.detail ? ' — ' + info.detail : ''));
+    $('meta').style.display = 'block';
+    $('controls').style.display = 'block';
+    $('mtitle').textContent = info.title || '(untitled)';
+    $('msub').textContent = [info.extractor, info.uploader, info.duration_string].filter(Boolean).join('  ·  ');
+    const d = $('mdesc'); d.textContent = info.description || '';
+    if (info.thumbnail) { $('thumb').src = info.thumbnail; $('thumb').onerror = () => $('thumb').style.display = 'none'; }
+    else $('thumb').parentElement.style.display = 'none';
+    const tb = $('formats').querySelector('tbody'); tb.textContent = '';
+    (info.formats || []).filter(f => !String(f.note).includes('m3u8')).slice(0, 24).forEach(f => {
+      const tr = document.createElement('tr');
+      for (const [v, cls] of [[f.format_id, ''], [f.ext, ''], [f.resolution ?? '', ''],
+        [f.filesize ? (f.filesize / 1048576).toFixed(1) + ' MB' : '', 'dim'],
+        [f.note ?? '', 'dim']]) {
+        const td = document.createElement('td'); td.textContent = v; if (cls) td.className = cls; tr.appendChild(td);
+      }
+      tb.appendChild(tr);
+    });
+  } catch (err) {
+    $('meta').style.display = 'block'; $('controls').style.display = 'none';
+    $('mtitle').textContent = 'extraction failed'; $('msub').textContent = ''; 
+    const d = $('mdesc'); d.className = 'err'; d.textContent = err.message;
+  } finally { $('inspect').disabled = false; $('inspect').textContent = 'Inspect'; }
+});
+
+/* queue */
+$('go').addEventListener('click', async () => {
+  const url = currentUrl(); if (!url) return alert('invalid url');
+  const res = await fetch('/api/download', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ url, format: $('format').value, quality: $('quality').value }),
+  });
+  if (!res.ok) { const j = await res.json(); alert(j.error || 'failed to queue'); return; }
+  const job = await res.json(); jobs[job.id] = job; render();
+});
+
+/* jobs poll */
+let jobs = {};
+async function poll() {
+  if (!Object.keys(jobs).length) return;
+  const list = await (await fetch('/api/jobs')).json();
+  list.forEach(j => { if (jobs[j.id]) jobs[j.id] = j; });
+  // pick the most recent job as the featured progress bar
+  const latest = Object.values(jobs).sort((a, b) => b.createdAt - a.createdAt)[0];
+  if (latest) setProgress(latest);
+  render();
+}
+setInterval(poll, 1500);
+function setProgress(j) {
+  $('barfill').style.width = Math.max(0, j.progress ?? 0) + '%';
+  $('pstate').textContent = j.status + (j.status === 'done' ? ' ✓' : j.status === 'error' ? ' — ' + (j.error || '').slice(0, 80) : ' · ' + (j.progress ?? 0) + '%');
+  $('pspeed').textContent = [j.speed, j.eta && 'eta ' + j.eta].filter(Boolean).join('  ·  ');
+}
+
+function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+
+function render() {
+  const box = $('jobs');
+  const list = Object.values(jobs).sort((a, b) => b.createdAt - a.createdAt);
+  if (!list.length) { box.textContent = ''; box.appendChild(el('div', 'empty', 'no jobs yet')); return; }
+  box.textContent = '';
+  list.forEach(j => {
+    const card = el('div', 'job');
+    const top = el('div', 'top');
+    top.appendChild(el('div', j.status === 'error' ? 'title err' : 'title', j.info?.title || j.url));
+    const side = el('div',
+      j.status === 'done' ? 'side ok' : 'side',
+      j.status + (j.status !== 'done' ? ' ' + (j.progress ?? 0) + '%' : ' ' + ((j.fileSize ?? 0) / 1048576).toFixed(1) + 'MB'));
+    top.appendChild(side); card.appendChild(top);
+
+    if (j.status === 'downloading' || j.status === 'merging' || j.status === 'queued' || j.status === 'processing') {
+      const bar = el('div', 'bar'); const i = el('i'); i.style.width = (j.progress ?? 0) + '%'; bar.appendChild(i); card.appendChild(bar);
+    }
+
+    const ops = el('div', 'ops');
+    if (j.status === 'done') {
+      const a = el('a', '', 'Save file →'); a.href = `/api/jobs/${j.id}/file`;
+      a.download = ''; ops.appendChild(a);
+    }
+    const bx = el('button', 'ghost', j.status === 'error' ? 'Dismiss' : (['downloading', 'merging', 'queued'].includes(j.status) ? 'Cancel' : 'Remove'));
+    bx.addEventListener('click', async () => { await fetch(`/api/jobs/${j.id}`, { method: 'DELETE' }); await poll(); if (j.id in jobs) delete jobs[j.id]; render(); });
+    ops.appendChild(bx);
+    card.appendChild(ops);
+    box.appendChild(card);
+  });
+}
+</script>
+</body>
+</html>

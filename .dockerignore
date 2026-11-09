@@ -1,0 +1,7 @@
+node_modules
+downloads
+.venv
+server.log
+test.js
+.DS_Store
+.git
