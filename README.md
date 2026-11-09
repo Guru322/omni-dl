@@ -1,4 +1,4 @@
-# Media Download API
+# Media Download API — omni-dl
 
 Express.js REST API for downloading media from **~1,800 sites** (YouTube, Instagram, TikTok, X/Twitter, Reddit, SoundCloud, ...) — the same engine that powers [Seal](https://github.com/junkfood02/Seal): **yt-dlp** (extractors) + **ffmpeg** (merging/converting).
 
