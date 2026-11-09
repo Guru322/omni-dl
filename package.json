@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
     "dev": "node --env-file-if-exists=.env --watch server.js",
-    "postinstall": "node scripts/install-ytdlp.js"
+    "postinstall": "node scripts/install-ytdlp.js || true"
   },
   "license": "MIT",
   "dependencies": {
