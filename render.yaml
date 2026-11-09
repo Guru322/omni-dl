@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: omni-dl
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    # Dockerfile CMD (node server.js) reads PORT / MAX_CONCURRENT / etc.
+    # Secrets like API_KEY / COOKIES_FILE can be set from the dashboard env tab.

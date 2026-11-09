@@ -648,7 +648,7 @@ app.get('/api/media/:formatId', async (req, res) => {
 
 /* ---------------------------------- listen --------------------------------- */
 
-app.listen(PORT, () => {
-  console.log(`Media Download API → http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Media Download API → http://0.0.0.0:${PORT}`);
   console.log(`  yt-dlp: ${YTDLP} | ffmpeg: ${FFMPEG_PATH || 'MISSING (mux/audio will fail)'} | cookies: ${COOKIES_FILE || 'none'} | max concurrent: ${MAX_CONCURRENT}`);
 });
