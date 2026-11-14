@@ -76,6 +76,7 @@
 
 <header>
   <h1>Media Downloader</h1>
+  <input id="apikey" type="password" placeholder="api key (optional)" autocomplete="off" style="width:190px;padding:6px 10px;font-size:11px;">
   <span class="stat" id="stat">yt-dlp</span>
 </header>
 
@@ -134,12 +135,28 @@ const currentUrl = () => {
   try { const u = new URL($('url').value.trim()); if (!/^https?:$/.test(u.protocol)) throw 0; return u.href; }
   catch { return null; }
 };
-const csrfKey = () => $('x-api-key')?.value || '';
+
+/* api key handling: stored locally, sent as x-api-key on every call.
+   File links use ?key= because <a href> downloads can't carry custom headers. */
+const apiKey = () => (localStorage.getItem('apiKey') || '').trim();
+const authHeaders = () => {
+  const h = { 'content-type': 'application/json' };
+  const k = apiKey();
+  if (k) h['x-api-key'] = k;
+  return h;
+};
+const authed = (path) => apiKey() ? path + (path.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(apiKey()) : path;
+
+$('apikey').value = apiKey();
+$('apikey').addEventListener('input', (e) => {
+  localStorage.setItem('apiKey', e.target.value.trim());
+  tick();
+});
 
 /* health/heartbeat */
 async function tick() {
   try {
-    const h = await (await fetch('/api/health')).json();
+    const h = await (await fetch('/api/health', { headers: authHeaders() })).json();
     $('stat').textContent = `queue ${h.queueDepth} · running ${h.running} · active ${h.active}`;
   } catch { $('stat').textContent = 'offline'; }
 }
@@ -151,7 +168,7 @@ $('form').addEventListener('submit', async (e) => {
   const url = currentUrl(); if (!url) return alert('invalid url');
   $('inspect').disabled = true; $('inspect').textContent = 'loading…';
   try {
-    const res = await fetch('/api/info?url=' + encodeURIComponent(url));
+    const res = await fetch('/api/info?url=' + encodeURIComponent(url), { headers: authHeaders() });
     const info = await res.clone().json();
     if (info.error) throw new Error(info.error + (info.detail ? ' — ' + info.detail : ''));
     $('meta').style.display = 'block';
@@ -182,7 +199,7 @@ $('form').addEventListener('submit', async (e) => {
 $('go').addEventListener('click', async () => {
   const url = currentUrl(); if (!url) return alert('invalid url');
   const res = await fetch('/api/download', {
-    method: 'POST', headers: { 'content-type': 'application/json' },
+    method: 'POST', headers: authHeaders(),
     body: JSON.stringify({ url, format: $('format').value, quality: $('quality').value }),
   });
   if (!res.ok) { const j = await res.json(); alert(j.error || 'failed to queue'); return; }
@@ -193,7 +210,7 @@ $('go').addEventListener('click', async () => {
 let jobs = {};
 async function poll() {
   if (!Object.keys(jobs).length) return;
-  const list = await (await fetch('/api/jobs')).json();
+  const list = await (await fetch('/api/jobs', { headers: authHeaders() })).json();
   list.forEach(j => { if (jobs[j.id]) jobs[j.id] = j; });
   // pick the most recent job as the featured progress bar
   const latest = Object.values(jobs).sort((a, b) => b.createdAt - a.createdAt)[0];
@@ -229,11 +246,11 @@ function render() {
 
     const ops = el('div', 'ops');
     if (j.status === 'done') {
-      const a = el('a', '', 'Save file →'); a.href = `/api/jobs/${j.id}/file`;
+      const a = el('a', '', 'Save file →'); a.href = authed(`/api/jobs/${j.id}/file`);
       a.download = ''; ops.appendChild(a);
     }
     const bx = el('button', 'ghost', j.status === 'error' ? 'Dismiss' : (['downloading', 'merging', 'queued'].includes(j.status) ? 'Cancel' : 'Remove'));
-    bx.addEventListener('click', async () => { await fetch(`/api/jobs/${j.id}`, { method: 'DELETE' }); await poll(); if (j.id in jobs) delete jobs[j.id]; render(); });
+    bx.addEventListener('click', async () => { await fetch(authed(`/api/jobs/${j.id}`), { method: 'DELETE', headers: authHeaders() }); await poll(); if (j.id in jobs) delete jobs[j.id]; render(); });
     ops.appendChild(bx);
     card.appendChild(ops);
     box.appendChild(card);

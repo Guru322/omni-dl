@@ -76,8 +76,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use((req, res, next) => {
   if (!API_KEY) return next();
+  // header preferred; ?key= exists so browser-only flows (e.g. the UI's
+  // <a href> file download) can authenticate without custom headers
   if (req.header('x-api-key') === API_KEY) return next();
-  res.status(401).json({ error: 'Invalid or missing x-api-key header' });
+  if (req.query.key === API_KEY) return next();
+  res.status(401).json({ error: 'Invalid or missing x-api-key header (or ?key=)' });
 });
 
 /* ------------------------------- job registry ------------------------------ */
