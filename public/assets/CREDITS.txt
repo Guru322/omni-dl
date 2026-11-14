@@ -1,0 +1,17 @@
+Visual assets — sources & licenses
+==================================
+
+chrome.jpg    "3D chrome abstract"        — CC BY   — https://live.staticflickr.com/4132/4973344916_b789c56aff_b.jpg (via Openverse)
+grid.jpg      "Blue Grid" — Brett Jordan  — CC BY   — https://live.staticflickr.com/8464/8111933467_d15980dbd1_b.jpg (via Openverse)
+cube.jpg      "Looking through a string cube" — CC BY — https://live.staticflickr.com/5483/9964662025_0399c7085f_b.jpg (via Openverse)
+neon-tri.jpg  "Neon Triangles" — shaire productions — CC BY — https://live.staticflickr.com/3084/2779087650_48db3d3db1_b.jpg (via Openverse)
+time-space.jpg "The Science of Time and Space Travel" — Wonderlane — CC0 — https://live.staticflickr.com/3237/2850300484_0c283c403b_b.jpg (via Openverse)
+holo-cloud.jpg "Iridescent Cloud"        — Wikimedia Commons — https://commons.wikimedia.org/wiki/File:Iridescent_Cloud.JPG
+holo-bubble.jpg "Soap Bubble — iridescent colours — Traquair" — Wikimedia Commons — https://commons.wikimedia.org/wiki/File:Soap_Bubble_-_foliage_background_-_iridescent_colours_-_Traquair_040801.jpg
+
+Fonts (self-hosted from Google Fonts, OFL):
+orbitron.woff2  Orbitron  — https://fonts.google.com/specimen/Orbitron
+michroma.woff2  Michroma  — https://fonts.google.com/specimen/Michroma
+sharetechmono.woff2 Share Tech Mono — https://fonts.google.com/specimen/Share+Tech+Mono
+
+CC BY assets are attributed in the page footer.

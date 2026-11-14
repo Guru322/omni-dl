@@ -257,7 +257,8 @@ function runDownload(job) {
 
     proc.stdout.on('data', onLine);
     proc.stderr.on('data', (d) => {
-      if (!job.errorDetail) job.errorDetail = d.toString().trim().slice(0, 2000);
+      /* accumulate and keep the tail — python tracebacks put the real reason in the last lines */
+      job.errorDetail = ((job.errorDetail || '') + d.toString()).slice(-4000);
     });
     proc.on('error', (err) => {
       setJob(job, { status: 'error', error: `spawn failed: ${err.message}`, finishedAt: Date.now() });
@@ -287,7 +288,7 @@ function runDownload(job) {
             fileSize: fs.statSync(found).size, finishedAt: Date.now(),
           });
         } else {
-          setJob(job, { status: 'error', error: job.errorDetail || 'download finished but file not found', finishedAt: Date.now() });
+          setJob(job, { status: 'error', error: (job.errorDetail || '').trim().slice(-2000) || 'download finished but file not found', finishedAt: Date.now() });
         }
       } else {
         setJob(job, { status: 'error', error: job.errorDetail || `yt-dlp exited with code ${code}`, finishedAt: Date.now() });
