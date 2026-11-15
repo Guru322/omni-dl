@@ -463,10 +463,10 @@
           <option value="audio">FORMAT ▸ opus (audio)</option>
         </select>
         <select id="quality" aria-label="quality">
-          <option>QUALITY ▸ best</option><option>QUALITY ▸ 2160</option>
-          <option>QUALITY ▸ 1440</option><option selected>QUALITY ▸ 1080</option>
-          <option>QUALITY ▸ 720</option><option>QUALITY ▸ 480</option>
-          <option>QUALITY ▸ 360</option>
+          <option value="best">QUALITY ▸ best</option><option value="2160">QUALITY ▸ 2160</option>
+          <option value="1440">QUALITY ▸ 1440</option><option value="1080" selected>QUALITY ▸ 1080</option>
+          <option value="720">QUALITY ▸ 720</option><option value="480">QUALITY ▸ 480</option>
+          <option value="360">QUALITY ▸ 360</option>
         </select>
         <button class="btn btn-magenta" id="go" style="min-width:110px">Queue ▸</button>
       </div>
@@ -542,7 +542,7 @@ async function tick() {
     $('tickMsg').innerHTML = `[LIVE] queue:${h.queueDepth} · running:${h.running} · active:${h.active} &nbsp;<span class="dim">// engine nominal — feed a signal</span>`;
     document.title = `OMNI-DL :: ${h.running} running`;
     document.body.classList.toggle('playing', h.running > 0);
-    $('queueTag').textContent = `// ${h.active} ACTIVE`;
+    $('queueTag').textContent = `// ${h.active} JOBS`;
   } catch {
     $('led').className = 'led off';
     $('tickMsg').textContent = '[SIGNAL LOST] api unreachable — check the engine';
