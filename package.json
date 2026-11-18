@@ -6,13 +6,13 @@
   "type": "commonjs",
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
-    "dev": "node --env-file-if-exists=.env --watch server.js",
-    "postinstall": "node scripts/install-ytdlp.js || true"
+    "dev": "node --env-file-if-exists=.env --watch server.js"
   },
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "ffmpeg-static": "^5.2.0"
+    "ffmpeg-static": "^5.2.0",
+    "youtube-dl-exec": "^3.1.19"
   }
 }

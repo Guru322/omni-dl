@@ -1,6 +1,6 @@
 /**
  * Downloads the platform-matching yt-dlp standalone binary into ./bin/
- * Runs on npm install (postinstall) so any PaaS container gets it fresh.
+ * Runs during the Docker build. Other installs use the youtube-dl-exec binary.
  * Idempotent; skips if already present or network blocked (server falls
  * back to PATH / pip variants at boot).
  */
