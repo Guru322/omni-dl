@@ -3,499 +3,69 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OMNI-DL :: MEDIA ENGINE 2K</title>
-<style>
-  /* ===================== Y2K TECHNO DESIGN SYSTEM ===================== */
-  @font-face { font-family: 'Orbitron'; src: url('assets/fonts/orbitron.woff2') format('woff2'); font-weight: 500 900; font-display: swap; }
-  @font-face { font-family: 'Michroma'; src: url('assets/fonts/michroma.woff2') format('woff2'); font-weight: 400; font-display: swap; }
-  @font-face { font-family: 'Share Tech Mono'; src: url('assets/fonts/sharetechmono.woff2') format('woff2'); font-weight: 400; font-display: swap; }
-
-  :root {
-    --ink: #080101;
-    --navy: #1c0404;
-    --cyan: #ff2222;
-    --blue: #8b0000;
-    --purple: #4d0000;
-    --magenta: #ff4b3a;
-    --silver: #e6ddd9;
-    --glass: rgba(255, 60, 40, .08);
-    --glass-line: rgba(255, 105, 85, .28);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    background:
-      radial-gradient(900px 480px at 82% -140px, rgba(120,10,10,.20), transparent 60%),
-      radial-gradient(1100px 520px at -10% 8%, rgba(139,10,10,.16), transparent 55%),
-      radial-gradient(800px 500px at 100% 100%, rgba(255,40,32,.07), transparent 60%),
-      var(--ink);
-    color: var(--silver);
-    font: 13px/1.55 "Share Tech Mono", monospace;
-    min-height: 100vh;
-    padding: 0 0 70px;
-    overflow-x: hidden;
-  }
-  body::before { /* subtle digital noise */
-    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 40;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.05'/%3E%3C/svg%3E");
-    mix-blend-mode: overlay;
-  }
-  a { color: var(--cyan); text-decoration: none; }
-  a:hover { color: #fff; text-shadow: 0 0 10px var(--cyan); }
-
-  #wrap { max-width: 980px; margin: 0 auto; padding: 0 18px; position: relative; z-index: 1; }
-
-  /* ---------- chrome type ---------- */
-  .chrome {
-    font-family: 'Orbitron', sans-serif;
-    background: linear-gradient(180deg, #ffffff 0%, #ffd9cf 30%, #b06a5e 50%, #ffffff 55%, #d89c8e 70%, #ffece5 100%);
-    -webkit-background-clip: text; background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 2px 1px rgba(0,0,0,.85)) drop-shadow(0 0 18px rgba(255,40,32,.35));
-  }
-  .neon { text-shadow: 0 0 8px rgba(255,40,32,.75), 0 0 24px rgba(139,10,10,.5); }
-  .mag  { text-shadow: 0 0 8px rgba(255,80,60,.75), 0 0 24px rgba(120,10,10,.5); }
-
-  /* ---------- compact nav ---------- */
-  #topnav {
-    position: sticky; top: 0; z-index: 30;
-    display: flex; align-items: center; gap: 4px;
-    padding: 8px 16px; margin: 0 -18px 6px;
-    background: linear-gradient(180deg, rgba(28,5,5,.92), rgba(12,2,2,.86));
-    backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--glass-line);
-    box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 8px 30px rgba(30,3,3,.6);
-  }
-  #topnav .brand { font: 700 15px 'Orbitron'; letter-spacing: 4px; margin-right: auto; }
-  #topnav .brand em { font-style: normal; color: var(--cyan); }
-  #topnav .navlink {
-    font: 10px 'Michroma'; letter-spacing: 2px; text-transform: uppercase;
-    color: #d8b0a8; padding: 6px 10px; border: 1px solid transparent; border-radius: 2px;
-    background: transparent; cursor: pointer;
-  }
-  #topnav .navlink:hover { color: #fff; border-color: var(--glass-line); background: var(--glass); }
-  #topnav .navlink:active { background: linear-gradient(180deg, rgba(255,40,32,.25), rgba(139,10,10,.12)); }
-  .navdot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); display: inline-block; margin-right: 5px; }
-  .navdot.off { background: #55607a; box-shadow: none; }
-
-  /* ---------- hero ---------- */
-  #hero { position: relative; padding: 34px 0 22px; }
-  #hero .chrome-big { font-size: clamp(34px, 7vw, 64px); letter-spacing: 6px; line-height: 1; }
-  #hero .sub { font: 10px 'Michroma'; letter-spacing: 6px; color: #d8b0a8; margin-top: 10px; text-transform: uppercase; }
-  #hero .sub b { color: var(--magenta); }
-  #orbwrap {
-    position: absolute; right: -30px; top: -12px; width: 240px; pointer-events: none;
-    filter: drop-shadow(0 12px 30px rgba(139,10,10,.35));
-    transform: rotate(8deg);
-    animation: floaty 7s ease-in-out infinite alternate;
-  }
-  #orbwrap img { width: 100%; border-radius: 50% 44% 52% 46%; mix-blend-mode: screen;
-    -webkit-mask-image: radial-gradient(ellipse at center, #000 52%, transparent 76%);
-    mask-image: radial-gradient(ellipse at center, #000 52%, transparent 76%);
-    filter: sepia(1) saturate(6) hue-rotate(-50deg) brightness(.85);
-  }
-  @keyframes floaty { from { transform: rotate(6deg) translateY(0); } to { transform: rotate(11deg) translateY(-14px); } }
-
-  .flare {
-    position: absolute; width: 220px; height: 220px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,40,32,.28), rgba(120,10,10,.12) 45%, transparent 70%);
-    filter: blur(2px); pointer-events: none;
-  }
-
-  /* ---------- glass panels ---------- */
-  .panel {
-    position: relative;
-    background:
-      linear-gradient(180deg, rgba(255,105,85,.07), rgba(255,80,60,.03) 40%, rgba(24,4,4,.25)),
-      var(--glass);
-    border: 1px solid var(--glass-line);
-    border-radius: 4px;
-    backdrop-filter: blur(10px);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,.14),
-      inset -1px -1px 0 rgba(0,0,0,.4),
-      0 10px 40px rgba(40,4,4,.5);
-    padding: 14px 16px;
-    margin-bottom: 16px;
-  }
-  .panel::before { /* corner brackets */
-    content: ""; position: absolute; inset: -1px; pointer-events: none;
-    background:
-      linear-gradient(var(--cyan), var(--cyan)) top left / 14px 1px no-repeat,
-      linear-gradient(var(--cyan), var(--cyan)) top left / 1px 14px no-repeat,
-      linear-gradient(var(--cyan), var(--cyan)) top right / 14px 1px no-repeat,
-      linear-gradient(var(--cyan), var(--cyan)) top right / 1px 14px no-repeat,
-      linear-gradient(var(--blue), var(--blue)) bottom left / 14px 1px no-repeat,
-      linear-gradient(var(--blue), var(--blue)) bottom left / 1px 14px no-repeat,
-      linear-gradient(var(--magenta), var(--magenta)) bottom right / 14px 1px no-repeat,
-      linear-gradient(var(--magenta), var(--magenta)) bottom right / 1px 14px no-repeat;
-    opacity: .8;
-  }
-  .panel-head {
-    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
-    border-bottom: 1px solid var(--glass-line);
-    padding-bottom: 8px; margin-bottom: 12px;
-  }
-  .panel-head h2 {
-    font: 700 12px 'Orbitron'; letter-spacing: 4px; text-transform: uppercase;
-    color: #eaf2ff;
-  }
-  .panel-head .step {
-    font: 10px 'Michroma'; letter-spacing: 3px; color: var(--magenta);
-    text-shadow: 0 0 10px rgba(255,80,60,.5); white-space: nowrap;
-  }
-  .panel-head .step.cyan { color: var(--cyan); text-shadow: 0 0 10px rgba(255,40,32,.5); }
-
-  /* holo overlay fills (image textures, blended) */
-  .holo {
-    position: relative; overflow: hidden;
-  }
-  .holo::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: url('assets/holo-bubble.jpg') center/ 260px;
-    mix-blend-mode: overlay; opacity: .18;
-    filter: grayscale(1) sepia(1) saturate(7) hue-rotate(-45deg) brightness(.8);
-  }
-  .gridbg { position: relative; overflow: hidden; }
-  .gridbg::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none;
-    background: url('assets/grid.jpg') center/ 420px;
-    opacity: .09; mix-blend-mode: screen;
-    filter: grayscale(1) sepia(1) saturate(7) hue-rotate(-45deg) brightness(.8);
-  }
-
-  /* ---------- inputs ---------- */
-  input, select {
-    background: linear-gradient(180deg, rgba(14,3,3,.9), rgba(18,5,5,.75));
-    border: 1px solid var(--glass-line);
-    border-radius: 3px;
-    color: var(--silver);
-    caret-color: var(--cyan);
-    font: 13px 'Share Tech Mono', monospace;
-    padding: 9px 12px;
-    outline: none;
-    letter-spacing: .5px;
-    width: 100%;
-  }
-  input:focus, select:focus {
-    border-color: var(--cyan);
-    box-shadow: 0 0 0 1px rgba(255,40,32,.35), 0 0 18px rgba(255,40,32,.18), inset 0 0 14px rgba(255,40,32,.08);
-  }
-  input::placeholder { color: #7a6a66; }
-  select option { background: var(--navy); color: var(--silver); }
-
-  /* ---------- chrome buttons ---------- */
-  .btn {
-    position: relative;
-    font: 700 11px 'Orbitron'; letter-spacing: 3px; text-transform: uppercase;
-    color: #2b0505;
-    background: linear-gradient(180deg, #ff6a55 0%, #e01818 48%, #8b0000 52%, #ff3b2e 100%);
-    border: 1px solid rgba(255,190,180,.55);
-    border-radius: 3px;
-    padding: 9px 18px;
-    cursor: pointer;
-    box-shadow:
-      inset 0 1px 0 rgba(255,225,215,.75),
-      inset 0 -8px 14px rgba(90,0,0,.5),
-      0 4px 14px rgba(255,34,34,.45),
-      0 0 0 1px rgba(60,0,0,.6);
-    text-shadow: 0 1px 0 rgba(255,200,190,.4);
-    transition: filter .15s, transform .08s;
-    white-space: nowrap;
-  }
-  .btn:hover { filter: brightness(1.1) saturate(1.1); box-shadow: inset 0 1px 0 rgba(255,255,255,.95), inset 0 -8px 14px rgba(139,10,10,.4), 0 6px 22px rgba(255,40,32,.55), 0 0 0 1px rgba(20,40,90,.6); }
-  .btn:active { transform: translateY(1px); filter: brightness(.94); }
-  .btn:disabled { filter: grayscale(.7) brightness(.75); cursor: wait; }
-  .btn-magenta {
-    color: #2b0606;
-    background: linear-gradient(180deg, #ffd9d4 0%, #ff5a45 48%, #c11010 52%, #ff7a68 100%);
-    box-shadow: inset 0 1px 0 rgba(255,225,215,.8), inset 0 -8px 14px rgba(120,0,0,.45), 0 4px 14px rgba(255,75,58,.4), 0 0 0 1px rgba(90,12,6,.6);
-    border-color: rgba(255,200,190,.55);
-  }
-  .btn-ghost {
-    color: var(--cyan); background: rgba(255,40,32,.06);
-    border: 1px solid var(--glass-line); box-shadow: none; text-shadow: none;
-  }
-  .btn-ghost:hover { background: rgba(255,40,32,.14); color: #fff; }
-
-  /* ---------- status readout strip ---------- */
-  #readout {
-    display: flex; align-items: center; gap: 12px;
-    background: linear-gradient(180deg, rgba(14,3,3,.85), rgba(24,4,4,.65));
-    border: 1px solid var(--glass-line); border-radius: 3px;
-    padding: 7px 12px; margin-bottom: 16px;
-    overflow: hidden; white-space: nowrap;
-  }
-  #readout .led { width: 8px; height: 8px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); flex: none; }
-  #readout .led.off { background: #6e4a44; box-shadow: 0 0 8px #6e4a44; }
-  #tickMsg { font: 11px 'Share Tech Mono'; color: #ffdad2; letter-spacing: 1px; overflow: hidden; text-overflow: ellipsis; }
-  #tickMsg .dim { color: #7a6a66; }
-  #eqmini { display: flex; align-items: flex-end; gap: 2px; height: 16px; margin-left: auto; flex: none; }
-  #eqmini i { width: 3px; background: linear-gradient(180deg, var(--cyan), var(--blue)); height: 3px; opacity: .3; }
-  body.playing #eqmini i { opacity: 1; animation: eq 1s ease-in-out infinite alternate; }
-  body.playing #eqmini i:nth-child(2n) { animation-duration: .8s; }
-  body.playing #eqmini i:nth-child(3n) { animation-duration: 1.4s; }
-  @keyframes eq { from { height: 3px; } to { height: 16px; } }
-
-  /* ---------- meta display ---------- */
-  #meta { display: none; }
-  #meta .displaygrid { display: grid; grid-template-columns: 1fr 218px; gap: 16px; }
-  #meta .thumb-wrap { grid-column: 2; grid-row: 1 / span 3; position: relative; }
-  #meta img {
-    width: 100%; display: block;
-    border: 1px solid var(--glass-line); border-radius: 3px;
-    box-shadow: 0 8px 30px rgba(45,4,4,.6);
-  }
-  #meta img::selection { background: transparent; }
-  #meta h2 {
-    font: 700 17px 'Orbitron'; letter-spacing: 1px; color: #fff; line-height: 1.3;
-    text-shadow: 0 0 14px rgba(255,40,32,.35); margin-bottom: 6px;
-  }
-  #meta .sub { font: 10px 'Michroma'; letter-spacing: 2px; color: var(--cyan); text-transform: uppercase; margin-bottom: 6px; }
-  #meta .desc { color: #d8b0a8; font-size: 12px; max-height: 52px; overflow: hidden; border-top: 1px solid var(--glass-line); padding-top: 6px; }
-  #meta .desc.err { color: #ffb3a6; }
-
-  /* ---------- formats table ---------- */
-  #formats { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 11px; }
-  #formats th {
-    font: 700 9px 'Orbitron'; letter-spacing: 2px; text-transform: uppercase;
-    color: #d8b0a8; text-align: left;
-    border-bottom: 1px solid var(--glass-line); padding: 4px 8px;
-    background: linear-gradient(180deg, rgba(139,10,10,.14), transparent);
-  }
-  #formats td { border-bottom: 1px solid rgba(255,80,60,.12); padding: 4px 8px; color: #eccdc6; }
-  #formats tr:hover td { background: rgba(255,40,32,.07); color: #fff; }
-  #formats td.dim { color: #7a6a66; }
-
-  /* ---------- download controls ---------- */
-  #controls { display: none; margin-top: 18px; }
-  .row { display: flex; gap: 8px; margin-bottom: 12px; }
-  .row select { flex: 1; }
-
-  /* ---------- iridescent progress ---------- */
-  .barwrap {
-    position: relative; height: 24px; border-radius: 3px; overflow: hidden;
-    border: 1px solid var(--glass-line);
-    background: linear-gradient(180deg, rgba(12,2,2,.9), rgba(18,5,5,.7));
-    box-shadow: inset 0 2px 8px rgba(0,0,0,.6);
-  }
-  #barfill {
-    height: 100%; width: 0%;
-    background: linear-gradient(90deg, var(--blue), var(--cyan) 40%, var(--magenta) 75%, var(--purple));
-    background-size: 220% 100%;
-    box-shadow: 0 0 18px rgba(255,40,32,.5);
-    transition: width .5s;
-    position: relative;
-  }
-  #barfill::after {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
-    transform: translateX(-100%);
-    animation: sheen 2.4s linear infinite;
-  }
-  #barfill.done::after, #barfill.err::after { animation: none; }
-  #barfill.done { background: linear-gradient(90deg, #ff2222, #ffc9bd); }
-  #barfill.err  { background: linear-gradient(90deg, #3a3a3a, #8a8a8a); }
-  @keyframes sheen { to { transform: translateX(100%); } }
-  .pcttext {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font: 700 10px 'Orbitron'; letter-spacing: 4px; color: #fff;
-    text-shadow: 0 0 8px rgba(4,10,30,.9), 0 1px 2px #000;
-  }
-  .pct { display: flex; justify-content: space-between; margin-top: 5px; font-size: 10px; color: #d8b0a8; }
-  .pct #pspeed { color: var(--magenta); }
-
-  /* ---------- jobs ---------- */
-  .job {
-    position: relative;
-    border: 1px solid var(--glass-line); border-radius: 3px;
-    background: linear-gradient(180deg, rgba(30,6,6,.6), rgba(24,4,4,.45));
-    backdrop-filter: blur(6px);
-    margin-bottom: 10px; overflow: hidden;
-  }
-  .job::before {
-    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
-    background: linear-gradient(180deg, var(--cyan), var(--magenta));
-    opacity: .85;
-  }
-  .job .top {
-    display: flex; justify-content: space-between; gap: 10px;
-    padding: 6px 12px 6px 15px;
-    background: linear-gradient(180deg, rgba(139,10,10,.12), transparent);
-    border-bottom: 1px solid rgba(255,80,60,.14);
-  }
-  .job .title { font: 700 11px 'Orbitron'; letter-spacing: 1px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .job .title.err { color: #ffb3a6; }
-  .job .side { font: 10px 'Share Tech Mono'; color: #d8b0a8; white-space: nowrap; }
-  .job .side.ok { color: #ff4030; text-shadow: 0 0 8px rgba(255,64,48,.5); }
-  .job .body { padding: 8px 12px 8px 15px; }
-  .job .barwrap { height: 16px; }
-  .job .pcttext { font-size: 8px; letter-spacing: 2px; }
-  .job .ops { padding: 6px 12px 10px 15px; display: flex; gap: 12px; align-items: center; font-size: 10px; color: #d8b0a8; }
-  .btn-mini { padding: 5px 10px; font-size: 9px; letter-spacing: 2px; }
-  .empty { color: #7a6a66; padding: 12px 4px; font-style: italic; }
-  .ok   { color: #ff4030; }
-  .dim  { color: #7a6a66; }
-  .err  { color: #ffb3a6; }
-  .blink { animation: blink 1.1s step-start infinite; color: var(--magenta); }
-  @keyframes blink { 50% { opacity: .15; } }
-
-  /* ---------- footer ---------- */
-  #footer {
-    position: relative; overflow: hidden;
-    display: flex; align-items: center; justify-content: space-between; gap: 14px;
-    border: 1px solid var(--glass-line); border-radius: 4px;
-    background: linear-gradient(180deg, rgba(28,5,5,.8), rgba(12,2,2,.85));
-    backdrop-filter: blur(8px);
-    padding: 10px 14px; margin-top: 20px;
-    font-size: 10px; color: #a8928c; letter-spacing: 1px;
-  }
-  #footer::before {
-    content: ""; position: absolute; inset: 0;
-    background: url('assets/holo-cloud.jpg') center / cover;
-    opacity: .16; mix-blend-mode: overlay; pointer-events: none;
-    filter: grayscale(1) sepia(1) saturate(7) hue-rotate(-45deg) brightness(.8);
-  }
-  #visits {
-    font: 700 16px 'Orbitron'; color: var(--cyan);
-    text-shadow: 0 0 12px rgba(255,40,32,.6); letter-spacing: 4px;
-    flex: none;
-  }
-  #footer .credits { line-height: 1.5; }
-  #footer .credits a { color: #d8b0a8; border-bottom: 1px dotted #6e5650; }
-  #footer .credits a:hover { color: var(--cyan); }
-  #apikey {
-    width: 150px; padding: 5px 8px; font-size: 10px;
-  }
-
-  /* floating chrome cube accent */
-  #cube {
-    position: absolute; z-index: 0; pointer-events: none;
-    width: 150px; opacity: .55; mix-blend-mode: screen;
-    right: 4%; bottom: -30px; transform: rotate(-12deg);
-    animation: floaty2 9s ease-in-out infinite alternate;
-    -webkit-mask-image: radial-gradient(ellipse at center, #000 45%, transparent 74%);
-    mask-image: radial-gradient(ellipse at center, #000 45%, transparent 74%);
-    filter: sepia(1) saturate(6) hue-rotate(-50deg) brightness(.85);
-  }
-  @keyframes floaty2 { from { transform: rotate(-14deg) translateY(0); } to { transform: rotate(-8deg) translateY(-10px); } }
-
-  /* ---------- responsive ---------- */
-  @media (max-width: 720px) {
-    #meta .displaygrid { grid-template-columns: 1fr; }
-    #meta .thumb-wrap { grid-column: 1; grid-row: auto; max-width: 260px; }
-    #orbwrap { display: none; }
-    #cube { display: none; }
-    .row { flex-direction: column; }
-    .row .btn { width: 100%; }
-  }
-
-  /* ---------- reduced motion ---------- */
-  @media (prefers-reduced-motion: reduce) {
-    #orbwrap, #cube, #barfill::after { animation: none !important; }
-    .blink, body.playing #eqmini i { animation: none !important; }
-  }
-  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
-</style>
+<meta name="theme-color" content="#fafaf7">
+<title>Omni-DL · Media decoder</title>
+<link rel="stylesheet" href="/interface.css">
 </head>
 <body>
-
-<nav id="topnav" aria-label="main">
-  <span class="brand chrome">OMNI<em>·</em>DL</span>
-  <button class="navlink" onclick="document.getElementById('url').focus()"><span class="navdot"></span>Scan</button>
-  <button class="navlink" onclick="document.getElementById('go').scrollIntoView({block:'center'})">Queue</button>
-  <button class="navlink" onclick="document.getElementById('jobs').scrollIntoView({block:'center'})">Jobs</button>
-  <a class="navlink" href="/api/health" target="_blank" rel="noopener">API</a>
-</nav>
-
-<div id="wrap">
-
-  <section id="hero" aria-label="brand">
-    <div class="flare" style="right:-40px; top:-60px;"></div>
-    <div class="flare" style="left:-80px; top:120px; width:300px; height:300px; opacity:.6;"></div>
-    <div id="orbwrap" aria-hidden="true"><img src="assets/chrome.jpg" alt=""></div>
-    <h1 class="chrome chrome-big">OMNI·DL</h1>
-    <div class="sub">MEDIA ENGINE <b>2K</b> &nbsp;//&nbsp; TRANSCODE &middot; EXTRACT &middot; STREAM &nbsp;//&nbsp; EST. 1999</div>
+<header class="mast">
+  <div class="shell mast-inner">
+    <a class="wordmark" href="#main" aria-label="Omni-DL home"><i aria-hidden="true"></i>omni<span>/</span>dl</a>
+    <nav aria-label="Main navigation">
+      <a href="#decoder">Decoder</a><a href="#queue">Queue</a><a href="/api/health" target="_blank" rel="noopener">API <span class="arrow" aria-hidden="true"></span></a>
+    </nav>
+  </div>
+</header>
+<main class="shell" id="main">
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="intro">
+      <div class="signal" role="status"><span class="led" id="led"></span><span id="tickMsg">Connecting</span></div>
+      <h1 id="hero-title">Media<br><em>decoder<span>.</span></em></h1>
+      <p>Extract video and audio from a source URL.</p>
+    </div>
+    <div class="art" aria-hidden="true"><img src="/assets/phase-wings.webp" alt="" width="1200" height="720" fetchpriority="high"></div>
   </section>
 
-  <div id="readout" role="status" aria-live="polite">
-    <span class="led" id="led"></span>
-    <span id="tickMsg">booting engine...</span>
-    <span id="eqmini" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
-  </div>
-
-  <section class="panel holo" aria-label="inspect source">
-    <div class="panel-head">
-      <h2>Source Decoder</h2>
-      <span class="step cyan">// STEP 1</span>
-    </div>
+  <section class="panel" id="decoder" aria-labelledby="source-title">
+    <div class="panel-head"><h2 id="source-title">Source input</h2><span class="ribs" aria-hidden="true"></span></div>
     <form id="form">
-      <div class="row" style="align-items:stretch">
-        <input id="url" type="url" placeholder="http:// — feed any video / audio url into the decoder" autocomplete="off" required aria-label="media url">
-        <button type="submit" class="btn" id="inspect" style="min-width:120px">Decode</button>
+      <label for="url">Media URL</label>
+      <div class="source-row">
+        <div class="url-field"><span class="arrow" aria-hidden="true"></span><input id="url" type="url" placeholder="https://…" autocomplete="url" required></div>
+        <button type="submit" class="btn primary" id="inspect">Decode <span class="arrow" aria-hidden="true"></span></button>
       </div>
     </form>
-
-    <div id="meta">
+    <div id="meta" hidden>
       <div class="displaygrid">
-        <div class="thumb-wrap"><img id="thumb" alt="media thumbnail"></div>
-        <h2 id="mtitle"></h2>
-        <div class="sub" id="msub"></div>
-        <div class="desc" id="mdesc"></div>
+        <div class="thumb-wrap" hidden><img id="thumb" alt=""></div>
+        <div><h3 id="mtitle"></h3><div class="sub" id="msub"></div><p class="desc" id="mdesc"></p></div>
       </div>
-      <table id="formats">
-        <thead><tr><th>id</th><th>ext</th><th>resolution</th><th>size</th><th>note</th></tr></thead>
-        <tbody></tbody>
-      </table>
+      <div class="formats-wrap"><table id="formats"><caption>Available formats</caption>
+        <thead><tr><th>ID</th><th>Type</th><th>Resolution</th><th>Size</th><th>Note</th></tr></thead><tbody></tbody>
+      </table></div>
     </div>
-
-    <div id="controls">
-      <div class="panel-head" style="margin-top:18px">
-        <h2>Transcoder</h2>
-        <span class="step">// STEP 2</span>
-      </div>
-      <div class="row">
-        <select id="format" aria-label="format">
-          <option value="mp4">FORMAT ▸ mp4 (video+mux)</option>
-          <option value="webm">FORMAT ▸ webm (video)</option>
-          <option value="mp3">FORMAT ▸ mp3 (audio)</option>
-          <option value="m4a">FORMAT ▸ m4a (audio)</option>
-          <option value="audio">FORMAT ▸ opus (audio)</option>
-        </select>
-        <select id="quality" aria-label="quality">
-          <option value="best">QUALITY ▸ best</option><option value="2160">QUALITY ▸ 2160</option>
-          <option value="1440">QUALITY ▸ 1440</option><option value="1080" selected>QUALITY ▸ 1080</option>
-          <option value="720">QUALITY ▸ 720</option><option value="480">QUALITY ▸ 480</option>
-          <option value="360">QUALITY ▸ 360</option>
-        </select>
-        <button class="btn btn-magenta" id="go" style="min-width:110px">Queue ▸</button>
+    <div id="controls" hidden>
+      <h3>Download settings</h3>
+      <div class="settings">
+        <label>Format<select id="format"><option value="mp4">MP4 video</option><option value="webm">WebM video</option><option value="mp3">MP3 audio</option><option value="m4a">M4A audio</option><option value="audio">Opus audio</option></select></label>
+        <label>Quality<select id="quality"><option value="best">Best available</option><option value="2160">2160p</option><option value="1440">1440p</option><option value="1080" selected>1080p</option><option value="720">720p</option><option value="480">480p</option><option value="360">360p</option></select></label>
+        <button class="btn primary" id="go">Add to queue <span aria-hidden="true">→</span></button>
       </div>
       <div class="barwrap"><i id="barfill"></i><span class="pcttext" id="pcttext"></span></div>
-      <div class="pct"><span id="pstate">status: idle</span><span id="pspeed"></span></div>
+      <div class="pct"><span id="pstate">Idle</span><span id="pspeed"></span></div>
     </div>
   </section>
 
-  <section class="panel gridbg" aria-label="job queue">
-    <div class="panel-head">
-      <h2>Queue Buffer</h2>
-      <span class="step cyan" id="queueTag">// EMPTY</span>
-    </div>
-    <div id="jobs"><div class="empty">// buffer empty — decode a source to begin</div></div>
+  <section class="panel" id="queue" aria-labelledby="queue-title">
+    <div class="panel-head"><h2 id="queue-title">Download queue</h2><span class="count" id="queueTag">0 jobs</span><span class="ribs" aria-hidden="true"></span></div>
+    <div id="jobs"><div class="empty">No downloads queued.</div></div>
   </section>
 
-  <img id="cube" src="assets/cube.jpg" alt="" aria-hidden="true">
-
-  <footer id="footer">
-    <span class="digits" id="visits">000000</span>
-    <span class="credits">
-      engine <a href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener">yt-dlp</a> + <a href="https://ffmpeg.org" target="_blank" rel="noopener">ffmpeg</a>
-      · API: <a href="/api/health" target="_blank" rel="noopener">/api/health</a> <a href="/api/info" target="_blank" rel="noopener">/api/info</a>
-      · assets: <a href="https://openverse.org" target="_blank" rel="noopener">openverse</a>/<a href="https://commons.wikimedia.org" target="_blank" rel="noopener">wikimedia</a> CC (details: <a href="/assets/CREDITS.txt" target="_blank" rel="noopener">credits</a>)
-      · use responsibly
-    </span>
+  <footer>
+    <label class="key-label" for="apikey">API key <input type="password" id="apikey" placeholder="Optional" autocomplete="off"></label>
+    <div class="footer-links"><a href="https://github.com/Guru322/omni-dl">GitHub <span class="arrow" aria-hidden="true"></span></a><a href="/assets/CREDITS.txt">Credits <span class="arrow" aria-hidden="true"></span></a></div>
   </footer>
-
-</div>
+</main>
 
 <script>
 const $ = (id) => document.getElementById(id);
@@ -515,39 +85,22 @@ const authHeaders = () => {
 };
 const authed = (path) => apiKey() ? path + (path.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(apiKey()) : path;
 
-/* api key chip lives in the Queue Buffer panel header (asymmetric placement) */
-(function insertKeyField() {
-  const slot = document.createElement('input');
-  slot.id = 'apikey'; slot.type = 'password'; slot.autocomplete = 'off';
-  slot.placeholder = 'API KEY';
-  slot.setAttribute('aria-label', 'api key');
-  slot.value = apiKey();
-  slot.addEventListener('input', (e) => { localStorage.setItem('apiKey', e.target.value.trim()); tick(); });
-  $('queueTag').parentElement.insertBefore(slot, $('queueTag'));
-})();
+$('apikey').value = apiKey();
+$('apikey').addEventListener('input', (e) => {
+  localStorage.setItem('apiKey', e.target.value.trim());
+  tick();
+});
 
-/* visitor counter */
-const seen = parseInt(localStorage.getItem('visits') || '0', 10) + 1;
-localStorage.setItem('visits', String(seen));
-$('visits').textContent = String(13370 + seen).padStart(6, '0');
-
-/* eq bars */
-document.querySelectorAll('#eqmini i').forEach((b, i) => b.style.animationDelay = (i % 5) * 0.13 + 's');
-
-/* health/heartbeat */
 async function tick() {
   try {
-    const h = await (await fetch('/api/health', { headers: authHeaders() })).json();
+    const response = await fetch('/api/health', { headers: authHeaders() });
+    if (!response.ok) throw new Error(response.status === 401 ? 'API key required' : 'Engine offline');
+    const health = await response.json();
     $('led').className = 'led';
-    $('tickMsg').innerHTML = `[LIVE] queue:${h.queueDepth} · running:${h.running} · active:${h.active} &nbsp;<span class="dim">// engine nominal — feed a signal</span>`;
-    document.title = `OMNI-DL :: ${h.running} running`;
-    document.body.classList.toggle('playing', h.running > 0);
-    $('queueTag').textContent = `// ${h.active} JOBS`;
-  } catch {
+    $('tickMsg').textContent = health.running ? `Engine online · ${health.running} running` : 'Engine online';
+  } catch (err) {
     $('led').className = 'led off';
-    $('tickMsg').textContent = '[SIGNAL LOST] api unreachable — check the engine';
-    document.title = 'OMNI-DL :: OFFLINE';
-    document.body.classList.remove('playing');
+    $('tickMsg').textContent = err.message === 'API key required' ? err.message : 'Engine offline';
   }
 }
 setInterval(tick, 4000); tick();
@@ -556,18 +109,21 @@ setInterval(tick, 4000); tick();
 $('form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const url = currentUrl(); if (!url) return alert('invalid url');
-  $('inspect').disabled = true; $('inspect').textContent = 'Decoding...';
+  $('inspect').disabled = true; $('inspect').firstChild.textContent = 'Decoding… ';
   try {
     const res = await fetch('/api/info?url=' + encodeURIComponent(url), { headers: authHeaders() });
     const info = await res.clone().json();
     if (info.error) throw new Error(info.error + (info.detail ? ' — ' + info.detail : ''));
-    $('meta').style.display = 'block';
-    $('controls').style.display = 'block';
+    $('meta').hidden = false;
+    $('controls').hidden = false;
     $('mtitle').textContent = info.title || '(untitled)';
     $('msub').textContent = [info.extractor, info.uploader, info.duration_string].filter(Boolean).join('  ·  ');
     const d = $('mdesc'); d.className = 'desc'; d.textContent = info.description || '';
-    if (info.thumbnail) { $('thumb').src = info.thumbnail; $('thumb').onerror = () => $('thumb').style.display = 'none'; }
-    else $('thumb').parentElement.style.display = 'none';
+    const thumb = $('thumb');
+    thumb.parentElement.hidden = !info.thumbnail;
+    thumb.onerror = () => { thumb.parentElement.hidden = true; };
+    if (info.thumbnail) thumb.src = info.thumbnail;
+    $('formats').hidden = !info.formats?.length;
     const tb = $('formats').querySelector('tbody'); tb.textContent = '';
     (info.formats || []).filter(f => !String(f.note).includes('m3u8')).slice(0, 24).forEach(f => {
       const tr = document.createElement('tr');
@@ -579,11 +135,12 @@ $('form').addEventListener('submit', async (e) => {
       tb.appendChild(tr);
     });
   } catch (err) {
-    $('meta').style.display = 'block'; $('controls').style.display = 'none';
-    $('mtitle').textContent = 'Decoder fault!';
+    $('meta').hidden = false; $('controls').hidden = true;
+    $('thumb').parentElement.hidden = true; $('formats').hidden = true;
+    $('mtitle').textContent = 'Couldn’t decode this URL';
     $('msub').textContent = '';
     const d = $('mdesc'); d.className = 'desc err'; d.textContent = err.message;
-  } finally { $('inspect').disabled = false; $('inspect').textContent = 'Decode'; }
+  } finally { $('inspect').disabled = false; $('inspect').firstChild.textContent = 'Decode '; }
 });
 
 /* queue */
@@ -613,7 +170,7 @@ function setProgress(j) {
   fill.style.width = Math.max(0, j.progress ?? 0) + '%';
   fill.className = j.status === 'done' ? 'done' : j.status === 'error' ? 'err' : '';
   $('pcttext').textContent = j.status === 'done' ? 'TRANSFER COMPLETE' : j.status === 'error' ? 'TRANSFER FAULT' : (j.progress ?? 0) + '%';
-  $('pstate').innerHTML = 'status: <b>' + j.status + '</b>' + (j.status === 'error' ? ' — ' + (j.error || '').trim().slice(-70) : '');
+  $('pstate').textContent = 'Status: ' + j.status + (j.status === 'error' ? ' · ' + (j.error || '').trim().slice(-70) : '');
   $('pspeed').textContent = [j.speed, j.eta && 'eta ' + j.eta].filter(Boolean).join('  ·  ');
 }
 
@@ -622,7 +179,8 @@ function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.
 function render() {
   const box = $('jobs');
   const list = Object.values(jobs).sort((a, b) => b.createdAt - a.createdAt);
-  if (!list.length) { box.textContent = ''; box.appendChild(el('div', 'empty', '// buffer empty — decode a source to begin')); return; }
+  $('queueTag').textContent = `${list.length} ${list.length === 1 ? 'job' : 'jobs'}`;
+  if (!list.length) { box.textContent = ''; box.appendChild(el('div', 'empty', 'No downloads queued.')); return; }
   box.textContent = '';
   list.forEach(j => {
     const card = el('div', 'job');
