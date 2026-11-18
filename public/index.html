@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#fafaf7">
+<meta name="theme-color" content="#0b0d18">
 <title>Omni-DL · Media decoder</title>
 <link rel="stylesheet" href="/interface.css">
 </head>
@@ -12,7 +12,7 @@
   <div class="shell mast-inner">
     <a class="wordmark" href="#main" aria-label="Omni-DL home"><i aria-hidden="true"></i>omni<span>/</span>dl</a>
     <nav aria-label="Main navigation">
-      <a href="#decoder">Decoder</a><a href="#queue">Queue</a><a href="/api/health" target="_blank" rel="noopener">API <span class="arrow" aria-hidden="true"></span></a>
+      <a href="#decoder">Decoder</a><a href="#queue">Queue</a><button type="button" id="api-status">API <span class="arrow" aria-hidden="true"></span></button>
     </nav>
   </div>
 </header>
@@ -20,7 +20,7 @@
   <section class="hero" aria-labelledby="hero-title">
     <div class="intro">
       <div class="signal" role="status"><span class="led" id="led"></span><span id="tickMsg">Connecting</span></div>
-      <h1 id="hero-title">Media<br><em>decoder<span>.</span></em></h1>
+      <h1 id="hero-title"><span>Media</span><br><em>decoder</em></h1>
       <p>Extract video and audio from a source URL.</p>
     </div>
     <div class="art" aria-hidden="true"><img src="/assets/phase-wings.webp" alt="" width="1200" height="720" fetchpriority="high"></div>
@@ -29,10 +29,17 @@
   <section class="panel" id="decoder" aria-labelledby="source-title">
     <div class="panel-head"><h2 id="source-title">Source input</h2><span class="ribs" aria-hidden="true"></span></div>
     <form id="form">
+      <div class="key-control">
+        <label for="apikey">Access key</label>
+        <input type="password" id="apikey" placeholder="API key" spellcheck="false" autocomplete="off" aria-describedby="key-state">
+        <output id="key-state" for="apikey" role="status">Checking…</output>
+      </div>
+      <div class="media-field">
       <label for="url">Media URL</label>
       <div class="source-row">
         <div class="url-field"><span class="arrow" aria-hidden="true"></span><input id="url" type="url" placeholder="https://…" autocomplete="url" required></div>
         <button type="submit" class="btn primary" id="inspect">Decode <span class="arrow" aria-hidden="true"></span></button>
+      </div>
       </div>
     </form>
     <div id="meta" hidden>
@@ -62,11 +69,15 @@
   </section>
 
   <footer>
-    <label class="key-label" for="apikey">API key <input type="password" id="apikey" placeholder="Optional" autocomplete="off"></label>
+    <a class="footer-brand" href="#main">omni/dl</a>
     <div class="footer-links"><a href="https://github.com/Guru322/omni-dl">GitHub <span class="arrow" aria-hidden="true"></span></a><a href="/assets/CREDITS.txt">Credits <span class="arrow" aria-hidden="true"></span></a></div>
   </footer>
 </main>
 
+<dialog id="api-dialog">
+  <h2>API status</h2><pre id="api-result"></pre>
+  <form method="dialog"><button class="btn">Close</button></form>
+</dialog>
 <script>
 const $ = (id) => document.getElementById(id);
 const currentUrl = () => {
@@ -74,36 +85,92 @@ const currentUrl = () => {
   catch { return null; }
 };
 
-/* api key handling: stored locally, sent as x-api-key on every call.
-   File links use ?key= because <a href> downloads can't carry custom headers. */
-const apiKey = () => (localStorage.getItem('apiKey') || '').trim();
-const authHeaders = () => {
-  const h = { 'content-type': 'application/json' };
-  const k = apiKey();
-  if (k) h['x-api-key'] = k;
-  return h;
-};
-const authed = (path) => apiKey() ? path + (path.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(apiKey()) : path;
+const keyField = $('apikey');
+const apiKey = () => keyField.value.trim();
+const pageUrl = new URL(location.href);
+const linkedKey = pageUrl.searchParams.get('key');
+if (linkedKey !== null) {
+  keyField.value = linkedKey;
+  pageUrl.searchParams.delete('key');
+  history.replaceState(history.state, '', pageUrl);
+} else {
+  try { keyField.value = localStorage.getItem('apiKey') || ''; } catch {}
+}
 
-$('apikey').value = apiKey();
-$('apikey').addEventListener('input', (e) => {
-  localStorage.setItem('apiKey', e.target.value.trim());
-  tick();
+function rememberKey() {
+  try {
+    if (apiKey()) localStorage.setItem('apiKey', apiKey());
+    else localStorage.removeItem('apiKey');
+  } catch { /* The current field works with storage disabled. */ }
+}
+if (linkedKey !== null) rememberKey();
+
+function fileLink(path) {
+  const key = apiKey();
+  return key ? path + '?key=' + encodeURIComponent(key) : path;
+}
+
+function showKey(message, rejected = false) {
+  $('key-state').textContent = message;
+  keyField.setAttribute('aria-invalid', String(rejected));
+}
+
+async function apiRequest(path, options = {}) {
+  const key = apiKey();
+  rememberKey();
+  const headers = { ...options.headers };
+  if (key) headers['x-api-key'] = key;
+  const settings = { ...options, headers, cache: 'no-store' };
+  let response = await fetch(path, settings);
+  // Some proxies drop custom headers. A 401 occurs before the route runs.
+  if (response.status === 401 && key && apiKey() === key) {
+    delete headers['x-api-key'];
+    headers.Authorization = 'Bearer ' + key;
+    response = await fetch(path, settings);
+  }
+  if (response.status === 401) {
+    const message = key ? 'Key rejected. Check the server API key.' : 'Enter the server API key.';
+    if (apiKey() === key) showKey(message, true);
+    throw Object.assign(new Error(message), { status: 401 });
+  }
+  return response;
+}
+
+let pendingTick;
+keyField.addEventListener('input', () => {
+  rememberKey();
+  showKey('Checking…');
+  clearTimeout(pendingTick);
+  pendingTick = setTimeout(tick, 350);
 });
 
 async function tick() {
+  const key = apiKey();
   try {
-    const response = await fetch('/api/health', { headers: authHeaders() });
-    if (!response.ok) throw new Error(response.status === 401 ? 'API key required' : 'Engine offline');
+    const response = await apiRequest('/api/health');
+    if (!response.ok) throw new Error();
     const health = await response.json();
+    if (apiKey() !== key) return;
     $('led').className = 'led';
     $('tickMsg').textContent = health.running ? `Engine online · ${health.running} running` : 'Engine online';
+    showKey(key ? 'Connected' : 'Open access');
   } catch (err) {
+    if (apiKey() !== key) return;
     $('led').className = 'led off';
-    $('tickMsg').textContent = err.message === 'API key required' ? err.message : 'Engine offline';
+    $('tickMsg').textContent = err.status === 401 ? 'Access locked' : 'Engine offline';
+    if (err.status !== 401) showKey('Connection unavailable');
   }
 }
 setInterval(tick, 4000); tick();
+
+$('api-status').addEventListener('click', async () => {
+  $('api-result').textContent = 'Connecting…';
+  $('api-dialog').showModal();
+  try {
+    const response = await apiRequest('/api/health');
+    $('api-result').textContent = JSON.stringify(await response.json(), null, 2);
+  } catch (err) { $('api-result').textContent = err.message; }
+});
 
 /* inspect */
 $('form').addEventListener('submit', async (e) => {
@@ -111,8 +178,8 @@ $('form').addEventListener('submit', async (e) => {
   const url = currentUrl(); if (!url) return alert('invalid url');
   $('inspect').disabled = true; $('inspect').firstChild.textContent = 'Decoding… ';
   try {
-    const res = await fetch('/api/info?url=' + encodeURIComponent(url), { headers: authHeaders() });
-    const info = await res.clone().json();
+    const res = await apiRequest('/api/info?url=' + encodeURIComponent(url));
+    const info = await res.json();
     if (info.error) throw new Error(info.error + (info.detail ? ' — ' + info.detail : ''));
     $('meta').hidden = false;
     $('controls').hidden = false;
@@ -135,7 +202,13 @@ $('form').addEventListener('submit', async (e) => {
       tb.appendChild(tr);
     });
   } catch (err) {
-    $('meta').hidden = false; $('controls').hidden = true;
+    $('controls').hidden = true;
+    if (err.status === 401) {
+      $('meta').hidden = true;
+      keyField.focus();
+      return;
+    }
+    $('meta').hidden = false;
     $('thumb').parentElement.hidden = true; $('formats').hidden = true;
     $('mtitle').textContent = 'Couldn’t decode this URL';
     $('msub').textContent = '';
@@ -146,19 +219,28 @@ $('form').addEventListener('submit', async (e) => {
 /* queue */
 $('go').addEventListener('click', async () => {
   const url = currentUrl(); if (!url) return alert('invalid url');
-  const res = await fetch('/api/download', {
-    method: 'POST', headers: authHeaders(),
-    body: JSON.stringify({ url, format: $('format').value, quality: $('quality').value }),
-  });
-  if (!res.ok) { const j = await res.json(); alert(j.error || 'failed to queue'); return; }
-  const job = await res.json(); jobs[job.id] = job; render();
+  $('go').disabled = true;
+  try {
+    const res = await apiRequest('/api/download', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ url, format: $('format').value, quality: $('quality').value }),
+    });
+    const job = await res.json();
+    if (!res.ok) throw new Error(job.error || 'Failed to queue');
+    jobs[job.id] = job; render();
+  } catch (err) {
+    $('pstate').textContent = err.message;
+    if (err.status === 401) keyField.focus();
+  } finally { $('go').disabled = false; }
 });
 
 /* jobs poll */
 let jobs = {};
 async function poll() {
   if (!Object.keys(jobs).length) return;
-  const list = await (await fetch('/api/jobs', { headers: authHeaders() })).json();
+  const response = await apiRequest('/api/jobs').catch(() => null);
+  if (!response?.ok) return;
+  const list = await response.json();
   list.forEach(j => { if (jobs[j.id]) jobs[j.id] = j; });
   const latest = Object.values(jobs).sort((a, b) => b.createdAt - a.createdAt)[0];
   if (latest) setProgress(latest);
@@ -205,11 +287,18 @@ function render() {
 
     const ops = el('div', 'ops');
     if (j.status === 'done') {
-      const a = el('a', '', 'SAVE FILE →'); a.href = authed(`/api/jobs/${j.id}/file`);
+      const a = el('a', '', 'SAVE FILE →'); a.href = fileLink(`/api/jobs/${j.id}/file`);
+      a.onclick = () => { a.href = fileLink(`/api/jobs/${j.id}/file`); };
       a.download = ''; ops.appendChild(a);
     }
     const bx = el('button', 'btn btn-ghost btn-mini', j.status === 'error' ? 'DISMISS' : (['downloading', 'merging', 'queued'].includes(j.status) ? 'CANCEL' : 'REMOVE'));
-    bx.addEventListener('click', async () => { await fetch(authed(`/api/jobs/${j.id}`), { method: 'DELETE', headers: authHeaders() }); await poll(); if (j.id in jobs) delete jobs[j.id]; render(); });
+    bx.addEventListener('click', async () => {
+      try {
+        const response = await apiRequest(`/api/jobs/${j.id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Could not remove job');
+        delete jobs[j.id]; render();
+      } catch (err) { body.textContent = err.message; }
+    });
     ops.appendChild(bx);
     card.appendChild(ops);
     box.appendChild(card);

@@ -28,7 +28,8 @@ const { Readable } = require('stream');
 const { pipeline: streamPipeline } = require('stream/promises');
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
-const API_KEY = process.env.API_KEY || '';
+const API_KEY = (process.env.API_KEY || '').trim();
+if (process.env.API_KEY && !API_KEY) throw new Error('API_KEY contains only whitespace');
 const COOKIES_FILE = process.env.COOKIES_FILE || '';
 const MAX_CONCURRENT = parseInt(process.env.MAX_CONCURRENT || '3', 10);
 const CLEANUP_MINUTES = parseInt(process.env.CLEANUP_MINUTES || '60', 10);
@@ -84,6 +85,7 @@ app.use((req, res, next) => {
   // header preferred; ?key= exists so browser-only flows (e.g. the UI's
   // <a href> file download) can authenticate without custom headers
   if (req.header('x-api-key') === API_KEY) return next();
+  if (req.header('authorization') === 'Bearer ' + API_KEY) return next();
   if (req.query.key === API_KEY) return next();
   res.status(401).json({ error: 'Invalid or missing x-api-key header (or ?key=)' });
 });

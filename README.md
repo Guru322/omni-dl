@@ -63,7 +63,7 @@ Export cookies from your browser (extension: "Get cookies.txt") and run with:
 COOKIES_FILE=/path/to/cookies.txt API_KEY=secret npm start
 ```
 
-With `API_KEY` set, every request needs `x-api-key: secret`.
+When `API_KEY` is set, enter it in the decoder’s **Access key** field. API clients can send either `x-api-key: <key>` or `Authorization: Bearer <key>`.
 
 ## Tunneling through your own domain (`/api/media`)
 
