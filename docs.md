@@ -8,7 +8,7 @@ Auth: if `API_KEY` is set, every request needs the header `x-api-key: <key>`.
 
 ## `GET /`
 
-The monochrome web UI.
+The media decoder web UI.
 
 ---
 

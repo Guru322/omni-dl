@@ -21,7 +21,7 @@ Config knobs are documented in `.env.example`: `PORT`, `API_KEY`, `COOKIES_FILE`
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/` | monochrome web UI |
+| GET | `/` | media decoder web UI |
 | GET | `/api/health` | queue + worker stats |
 | GET | `/api/info?url=...` | metadata + formats, **each with a direct CDN/stream `url`** |
 | POST | `/api/download` | queue a server-side download job |
