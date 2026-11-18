@@ -33,6 +33,7 @@
         <label for="apikey">Access key</label>
         <input type="password" id="apikey" placeholder="API key" spellcheck="false" autocomplete="off" aria-describedby="key-state">
         <output id="key-state" for="apikey" role="status">Checking…</output>
+        <button id="forget-key" type="button" hidden>Forget saved key</button>
       </div>
       <div class="media-field">
       <label for="url">Media URL</label>
@@ -97,17 +98,19 @@ if (linkedKey !== null) {
   try { keyField.value = localStorage.getItem('apiKey') || ''; } catch {}
 }
 
-function rememberKey() {
-  try {
-    if (apiKey()) localStorage.setItem('apiKey', apiKey());
-    else localStorage.removeItem('apiKey');
-  } catch { /* The current field works with storage disabled. */ }
+function removeLegacyKey() {
+  try { localStorage.removeItem('apiKey'); } catch {}
 }
-if (linkedKey !== null) rememberKey();
 
+// From here on the key exists only in this field until the server verifies it.
+removeLegacyKey();
+
+let savedKey = false;
+let sessionWrite = Promise.resolve();
+let attemptedKey = '';
 function fileLink(path) {
   const key = apiKey();
-  return key ? path + '?key=' + encodeURIComponent(key) : path;
+  return !savedKey && key ? path + '?key=' + encodeURIComponent(key) : path;
 }
 
 function showKey(message, rejected = false) {
@@ -115,9 +118,7 @@ function showKey(message, rejected = false) {
   keyField.setAttribute('aria-invalid', String(rejected));
 }
 
-async function apiRequest(path, options = {}) {
-  const key = apiKey();
-  rememberKey();
+async function sendRequest(path, options, key) {
   const headers = { ...options.headers };
   if (key) headers['x-api-key'] = key;
   const settings = { ...options, headers, cache: 'no-store' };
@@ -136,11 +137,51 @@ async function apiRequest(path, options = {}) {
   return response;
 }
 
+async function apiRequest(path, options = {}) {
+  const key = apiKey();
+  if (key && key !== attemptedKey) {
+    attemptedKey = key;
+    sessionWrite = sessionWrite.catch(() => {}).then(async () => {
+      if (apiKey() !== key) return;
+      const response = await sendRequest('/api/session', { method: 'PUT' }, key);
+      if (!response.ok) throw new Error('Could not save key');
+    });
+  }
+  const write = sessionWrite;
+  try {
+    await write;
+  } catch (err) {
+    if (sessionWrite === write) {
+      attemptedKey = '';
+      sessionWrite = Promise.resolve();
+    }
+    throw err;
+  }
+  if (apiKey() !== key) return apiRequest(path, options);
+  return sendRequest(path, options, key);
+}
+
 let pendingTick;
-keyField.addEventListener('input', () => {
-  rememberKey();
-  showKey('Checking…');
+function forgetKey() {
+  keyField.value = '';
+  removeLegacyKey();
+  attemptedKey = '';
   clearTimeout(pendingTick);
+  // Serialize against an in-flight save so clearing the cookie wins.
+  sessionWrite = sessionWrite.catch(() => {}).then(async () => {
+    const response = await fetch('/api/session', { method: 'DELETE', cache: 'no-store' });
+    if (!response.ok) throw new Error('Could not clear saved key');
+    savedKey = false;
+    $('forget-key').hidden = true;
+    keyField.placeholder = 'API key';
+  });
+  sessionWrite.then(tick, () => showKey('Could not clear saved key', true));
+}
+$('forget-key').addEventListener('click', forgetKey);
+keyField.addEventListener('input', () => {
+  clearTimeout(pendingTick);
+  if (!apiKey()) return forgetKey();
+  showKey('Checking…');
   pendingTick = setTimeout(tick, 350);
 });
 
@@ -153,10 +194,24 @@ async function tick() {
     if (apiKey() !== key) return;
     $('led').className = 'led';
     $('tickMsg').textContent = health.running ? `Engine online · ${health.running} running` : 'Engine online';
-    showKey(key ? 'Connected' : 'Open access');
+    savedKey = health.savedKey;
+    $('forget-key').hidden = !savedKey;
+    keyField.placeholder = savedKey ? 'Saved on this browser' : 'API key';
+    if (savedKey) {
+      removeLegacyKey();
+      keyField.value = '';
+      attemptedKey = '';
+    }
+    showKey(savedKey ? 'Key saved' : key ? 'Connected' : 'Open access');
   } catch (err) {
     if (apiKey() !== key) return;
     $('led').className = 'led off';
+    attemptedKey = '';
+    if (err.status === 401 && !key) {
+      savedKey = false;
+      $('forget-key').hidden = true;
+      keyField.placeholder = 'API key';
+    }
     $('tickMsg').textContent = err.status === 401 ? 'Access locked' : 'Engine offline';
     if (err.status !== 401) showKey('Connection unavailable');
   }
