@@ -2,7 +2,7 @@
 
 Base URL: `http://localhost:3000` (or your deployed origin)
 
-Auth: if `API_KEY` is set, every request needs the header `x-api-key: <key>`.
+When `API_KEY` is set, API requests accept `x-api-key: <key>` or `Authorization: Bearer <key>`. The web UI exchanges the Access key for a 30-day HttpOnly cookie scoped to `/api`. HTTPS connections use a Secure cookie.
 
 ---
 

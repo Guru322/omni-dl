@@ -28,7 +28,8 @@ const { Readable } = require('stream');
 const { pipeline: streamPipeline } = require('stream/promises');
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
-const API_KEY = process.env.API_KEY || '';
+const API_KEY = (process.env.API_KEY || '').trim();
+if (process.env.API_KEY && !API_KEY) throw new Error('API_KEY contains only whitespace');
 const COOKIES_FILE = process.env.COOKIES_FILE || '';
 const MAX_CONCURRENT = parseInt(process.env.MAX_CONCURRENT || '3', 10);
 const CLEANUP_MINUTES = parseInt(process.env.CLEANUP_MINUTES || '60', 10);
@@ -79,13 +80,66 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 /* ---------------------------------- auth ---------------------------------- */
 
+const SESSION_COOKIE = 'omni_session';
+const SESSION_TTL = 30 * 24 * 60 * 60 * 1000;
+
+function signExpiry(expiry) {
+  return crypto.createHmac('sha256', API_KEY).update('omni-session:' + expiry).digest('hex');
+}
+
+function sessionCookieOptions(req) {
+  const secure = req.secure || req.get('origin')?.startsWith('https://') ||
+    req.get('x-forwarded-proto')?.split(',')[0].trim() === 'https';
+  return { path: '/api', httpOnly: true, sameSite: 'strict', secure };
+}
+
+function sameSiteRequest(req) {
+  const site = req.get('sec-fetch-site');
+  if (site) return site === 'same-origin' || site === 'none';
+  const origin = req.get('origin');
+  if (!origin) return true;
+  const scheme = (req.secure || req.get('x-forwarded-proto')?.split(',')[0].trim() === 'https') ? 'https' : 'http';
+  return origin === scheme + '://' + req.get('host');
+}
+
+function hasSession(req) {
+  const token = (req.get('cookie') || '').split(';').map(part => part.trim())
+    .find(part => part.startsWith(SESSION_COOKIE + '='))?.slice(SESSION_COOKIE.length + 1);
+  const match = /^(\d{13})\.([a-f0-9]{64})$/.exec(token || '');
+  if (!match || Number(match[1]) <= Date.now()) return false;
+  return crypto.timingSafeEqual(Buffer.from(match[2], 'hex'), Buffer.from(signExpiry(match[1]), 'hex'));
+}
+
+function validKeyHeader(req) {
+  return req.get('x-api-key') === API_KEY || req.get('authorization') === 'Bearer ' + API_KEY;
+}
+
+// Only an explicitly supplied key can create or renew a persistent session.
+app.put('/api/session', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (!sameSiteRequest(req)) return res.sendStatus(403);
+  if (!API_KEY) return res.sendStatus(204);
+  if (!validKeyHeader(req)) return res.sendStatus(401);
+  const expiry = String(Date.now() + SESSION_TTL);
+  res.cookie(SESSION_COOKIE, expiry + '.' + signExpiry(expiry), {
+    ...sessionCookieOptions(req), maxAge: SESSION_TTL,
+  });
+  res.sendStatus(204);
+});
+
+app.delete('/api/session', (req, res) => {
+  if (!sameSiteRequest(req)) return res.sendStatus(403);
+  res.set('Cache-Control', 'no-store').clearCookie(SESSION_COOKIE, sessionCookieOptions(req));
+  res.sendStatus(204);
+});
+
 app.use((req, res, next) => {
   if (!API_KEY) return next();
-  // header preferred; ?key= exists so browser-only flows (e.g. the UI's
-  // <a href> file download) can authenticate without custom headers
-  if (req.header('x-api-key') === API_KEY) return next();
-  if (req.query.key === API_KEY) return next();
-  res.status(401).json({ error: 'Invalid or missing x-api-key header (or ?key=)' });
+  res.set('Cache-Control', 'private, no-store');
+  res.locals.savedKey = sameSiteRequest(req) && hasSession(req);
+  const explicitKey = req.get('x-api-key') !== undefined || req.get('authorization') !== undefined || req.query.key !== undefined;
+  if (explicitKey ? validKeyHeader(req) || req.query.key === API_KEY : res.locals.savedKey) return next();
+  res.status(401).json({ error: 'Invalid or missing API key' });
 });
 
 /* ------------------------------- job registry ------------------------------ */
@@ -321,6 +375,7 @@ function scheduleCleanup(job) {
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
+    savedKey: Boolean(res.locals.savedKey),
     queueDepth: queue.length,
     running,
     active: jobs.size,
