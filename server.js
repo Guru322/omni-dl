@@ -17,6 +17,9 @@
 
 const express = require('express');
 const cors = require('cors');
+const youtubeDl = require('youtube-dl-exec');
+const { once } = require('node:events');
+const { createInterface } = require('node:readline');
 const { spawn } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
@@ -45,6 +48,7 @@ function pickYtdlp() {
   const cands = [
     process.env.YTDLP_PATH,
     path.join(__dirname, 'bin', 'yt-dlp'),           // dropped by scripts/install-ytdlp.js
+    youtubeDl.constants.YOUTUBE_DL_PATH,
     'yt-dlp',                                        // PATH
     path.join(os.homedir(), '.local', 'bin', 'yt-dlp'),
   ].filter(Boolean);
@@ -62,6 +66,7 @@ function pickFfmpeg() {
 }
 
 const YTDLP = pickYtdlp();
+const youtube = youtubeDl.create(YTDLP);
 const FFMPEG_PATH = pickFfmpeg();
 
 const DOWNLOADS_DIR = path.join(__dirname, 'downloads');
@@ -124,6 +129,7 @@ function snapshot(job) {
 
 function validUrl(url) {
   try {
+    if (typeof url !== 'string') return false;
     const u = new URL(url);
     return u.protocol === 'http:' || u.protocol === 'https:';
   } catch {
@@ -131,14 +137,21 @@ function validUrl(url) {
   }
 }
 
-function baseArgs(extra = []) {
-  const args = [
-    '--no-warnings', '--no-progress', '--no-color',
-    ...extra,
-  ];
-  if (COOKIES_FILE) args.push('--cookies', COOKIES_FILE);
-  if (FFMPEG_PATH) args.push('--ffmpeg-location', FFMPEG_PATH);
-  return args;
+function isYouTubeUrl(url) {
+  const host = new URL(url).hostname.replace(/\.$/, '');
+  return ['youtube.com', 'youtu.be', 'youtube-nocookie.com'].some(
+    (domain) => host === domain || host.endsWith(`.${domain}`)
+  );
+}
+
+function extractorFlags() {
+  return {
+    noWarnings: true,
+    noColor: true,
+    noPlaylist: true,
+    ...(COOKIES_FILE && { cookies: COOKIES_FILE }),
+    ...(FFMPEG_PATH && { ffmpegLocation: FFMPEG_PATH }),
+  };
 }
 
 function runYtdlp(args) {
@@ -158,7 +171,9 @@ function runYtdlp(args) {
 
 /* Extract metadata + formats without downloading. */
 async function fetchInfo(url) {
-  const raw = await runYtdlp(baseArgs(['-J', '--no-playlist', url]));
+  const flags = { ...extractorFlags(), noProgress: true, dumpSingleJson: true };
+  if (isYouTubeUrl(url)) return youtube(url, flags);
+  const raw = await runYtdlp([...youtubeDl.args(flags), '--', url]);
   return JSON.parse(raw);
 }
 
@@ -184,119 +199,109 @@ function listFormats(info) {
     }));
 }
 
-/** Common yt-dlp format selection for a preset. Returns [] of args. */
-function formatArgs({ format = 'mp4', quality = 'best' } = {}) {
+/** Shared format flags for both extractor runners. */
+function formatFlags({ format = 'mp4', quality = 'best' } = {}) {
   const h = quality === 'best' ? '' : `[height<=${quality}]`;
   switch (format) {
     case 'mp4':
-      return ['-f', `bv*[ext=mp4]${h}+ba[ext=m4a]/b${h.replace('height', 'best[height]')}/bv*+ba/b`,
-              '--merge-output-format', 'mp4'];
+      return { format: `bv*[ext=mp4]${h}+ba[ext=m4a]/b${h}/bv*+ba/b`, mergeOutputFormat: 'mp4' };
     case 'webm':
-      return ['-f', `bv*[ext=webm]${h}+bestaudio/b${h}/bv*+ba/b`,
-              '--merge-output-format', 'webm'];
+      return { format: `bv*[ext=webm]${h}+bestaudio/b${h}/bv*+ba/b`, mergeOutputFormat: 'webm' };
     case 'mp3':
-      return ['-f', 'bestaudio', '-x', '--audio-format', 'mp3', '--audio-quality', '0'];
+      return { format: 'bestaudio', extractAudio: true, audioFormat: 'mp3', audioQuality: '0' };
     case 'm4a':
-      return ['-f', `bestaudio[ext=m4a]${h === '' ? '' : ''}/bestaudio`, '-x', '--audio-format', 'm4a'];
+      return { format: 'bestaudio[ext=m4a]/bestaudio', extractAudio: true, audioFormat: 'm4a' };
     case 'audio':
-      return ['-f', 'bestaudio', '-x', '--audio-format', 'opus'];
+      return { format: 'bestaudio', extractAudio: true, audioFormat: 'opus' };
     default:
       throw new Error(`unsupported format "${format}" (use mp4 | webm | mp3 | m4a | audio)`);
   }
 }
 
+function startDownload(url, flags) {
+  if (isYouTubeUrl(url)) {
+    const proc = youtube.exec(url, flags, { reject: false });
+    return { proc, completed: proc };
+  }
+  const proc = spawn(YTDLP, [...youtubeDl.args(flags), '--', url]);
+  const completed = once(proc, 'close').then(([exitCode, signalCode]) => ({ exitCode, signalCode }));
+  return { proc, completed };
+}
+
 /* Download with progress streaming. */
-function runDownload(job) {
-  return new Promise((resolve) => {
-    const finish = () => resolve();
-
-    let args;
-    try {
-      args = formatArgs(job.options);
-    } catch (err) {
-      jobs.delete(job.id); // unsupported format — drop the job
-      setJob(job, { status: 'error', error: err.message, finishedAt: Date.now() });
-      return finish();
-    }
-
-    const outputTemplate = path.join(DOWNLOADS_DIR, job.id);
-    const proc = spawn(YTDLP, baseArgs([
-      '--no-playlist',
-      '--newline',
-      '--no-simulate',
-      '--print', 'after_move:filepath',
-      '-P', DOWNLOADS_DIR,
-      '-o', `${job.id}.%(ext)s`,
-      ...args,
-      job.url,
-    ]));
-
+async function runDownload(job) {
+  const outputTemplate = path.join(DOWNLOADS_DIR, job.id);
+  try {
+    const { proc, completed } = startDownload(job.url, {
+      ...extractorFlags(),
+      ...formatFlags(job.options),
+      newline: true,
+      progress: true,
+      noSimulate: true,
+      print: 'after_move:filepath',
+      paths: DOWNLOADS_DIR,
+      output: `${job.id}.%(ext)s`,
+    });
     setJob(job, { status: 'downloading', proc });
 
     let lastLinePath = null;
 
-    const onLine = (buf) => {
-      const text = buf.toString();
-      for (const line of text.split(/[\r\n]+/)) {
-        const m = line.match(/\[+(download|Merger|ExtractAudio)\]+.*?([\d.]+)%/);
-        if (m) {
-          const pct = parseFloat(m[2]);
-          const speed = line.match(/at\s+([\d.]+\w+\/s)/);
-          const eta = line.match(/ETA\s+([\d:]+)/);
-          setJob(job, {
-            progress: pct,
-            ...(speed && { speed: speed[1] }),
-            ...(eta && { eta: eta[1] }),
-            status: m[1] === 'download' ? 'downloading' : 'merging',
-          });
-        } else if (path.isAbsolute(line.trim()) && fs.existsSync(line.trim())) {
-          lastLinePath = line.trim();
-        }
+    const onLine = (line) => {
+      if (job.status === 'cancelled') return;
+      const m = line.match(/\[+(download|Merger|ExtractAudio)\]+.*?([\d.]+)%/);
+      if (m) {
+        const pct = parseFloat(m[2]);
+        const speed = line.match(/at\s+([\d.]+\w+\/s)/);
+        const eta = line.match(/ETA\s+([\d:]+)/);
+        setJob(job, {
+          progress: pct,
+          ...(speed && { speed: speed[1] }),
+          ...(eta && { eta: eta[1] }),
+          status: m[1] === 'download' ? 'downloading' : 'merging',
+        });
+      } else if (path.isAbsolute(line.trim()) && fs.existsSync(line.trim())) {
+        lastLinePath = line.trim();
       }
     };
-
-    proc.stdout.on('data', onLine);
-    proc.stderr.on('data', (d) => {
-      /* accumulate and keep the tail — python tracebacks put the real reason in the last lines */
-      job.errorDetail = ((job.errorDetail || '') + d.toString()).slice(-4000);
+    createInterface({ input: proc.stdout }).on('line', onLine);
+    createInterface({ input: proc.stderr }).on('line', (line) => {
+      if (line.startsWith('[download]')) return onLine(line);
+      job.errorDetail = ((job.errorDetail || '') + line + '\n').slice(-4000);
     });
-    proc.on('error', (err) => {
-      setJob(job, { status: 'error', error: `spawn failed: ${err.message}`, finishedAt: Date.now() });
-      finish();
-    });
-    proc.on('close', (code, signal) => {
-      if (signal === 'SIGTERM' || job.status === 'cancelled') {
-        setJob(job, { status: 'cancelled', finishedAt: Date.now() });
-        return finish();
-      }
-      if (code === 0 && lastLinePath) {
-        let fileSize = null;
-        try { fileSize = fs.statSync(lastLinePath).size; } catch { }
+    const { exitCode: code, signalCode: signal } = await completed;
+    if (signal === 'SIGTERM' || job.status === 'cancelled') {
+      setJob(job, { status: 'cancelled', finishedAt: Date.now() });
+      return;
+    }
+    if (code === 0 && lastLinePath) {
+      let fileSize = null;
+      try { fileSize = fs.statSync(lastLinePath).size; } catch { }
+      setJob(job, {
+        status: 'done', progress: 100, filePath: lastLinePath,
+        fileSize, finishedAt: Date.now(),
+      });
+    } else if (code === 0) {
+      // file printed wasn't stat-able; try to find it
+      const exts = ['mp4', 'webm', 'mp3', 'm4a', 'opus', 'mkv', 'ogg'];
+      const found = exts
+        .map((e) => `${outputTemplate}.${e}`)
+        .find((p) => fs.existsSync(p));
+      if (found) {
         setJob(job, {
-          status: 'done', progress: 100, filePath: lastLinePath,
-          fileSize, finishedAt: Date.now(),
+          status: 'done', progress: 100, filePath: found,
+          fileSize: fs.statSync(found).size, finishedAt: Date.now(),
         });
-      } else if (code === 0) {
-        // file printed wasn't stat-able; try to find it
-        const exts = ['mp4', 'webm', 'mp3', 'm4a', 'opus', 'mkv', 'ogg'];
-        const found = exts
-          .map((e) => `${outputTemplate}.${e}`)
-          .find((p) => fs.existsSync(p));
-        if (found) {
-          setJob(job, {
-            status: 'done', progress: 100, filePath: found,
-            fileSize: fs.statSync(found).size, finishedAt: Date.now(),
-          });
-        } else {
-          setJob(job, { status: 'error', error: (job.errorDetail || '').trim().slice(-2000) || 'download finished but file not found', finishedAt: Date.now() });
-        }
       } else {
-        setJob(job, { status: 'error', error: job.errorDetail || `yt-dlp exited with code ${code}`, finishedAt: Date.now() });
+        setJob(job, { status: 'error', error: (job.errorDetail || '').trim().slice(-2000) || 'download finished but file not found', finishedAt: Date.now() });
       }
-      job.info && Object.assign(snapshot(job), {});
-      finish();
-    });
-  });
+    } else {
+      setJob(job, { status: 'error', error: job.errorDetail || `yt-dlp exited with code ${code}`, finishedAt: Date.now() });
+    }
+  } catch (err) {
+    setJob(job, { status: 'error', error: err.message, finishedAt: Date.now() });
+  } finally {
+    delete job.proc;
+  }
 }
 
 /* ------------------------------ auto cleanup ------------------------------- */
@@ -353,7 +358,7 @@ app.post('/api/download', async (req, res) => {
 
   try {
     // Validate preset early (before queueing).
-    formatArgs({ format, quality });
+    formatFlags({ format, quality });
 
     const job = {
       id: crypto.randomUUID(),
@@ -365,8 +370,8 @@ app.post('/api/download', async (req, res) => {
     };
 
     // Fetch metadata (for title/type in responses) — non-fatal on failure.
-    runYtdlp(baseArgs(['-J', '--no-playlist', url]))
-      .then((raw) => setJob(job, { info: { title: JSON.parse(raw).title, extractor: JSON.parse(raw).extractor_key } }))
+    fetchInfo(url)
+      .then((info) => setJob(job, { info: { title: info.title, extractor: info.extractor_key } }))
       .catch(() => { });
 
     jobs.set(job.id, job);
@@ -418,11 +423,13 @@ app.delete('/api/jobs/:id', (req, res) => {
     jobs.delete(job.id);
     return res.json({ ok: true, removed: true });
   }
-  if (job.proc && !job.proc.killed) {
-    job.status = 'cancelled';
-    setJob(job, { status: 'cancelled' });
-    job.proc.kill('SIGTERM');
-    setTimeout(() => { try { job.proc.killed || job.proc.kill('SIGKILL'); } catch { } }, 5000).unref();
+  if (job.proc) {
+    if (job.status !== 'cancelled') {
+      const proc = job.proc;
+      setJob(job, { status: 'cancelled' });
+      proc.kill('SIGTERM');
+      setTimeout(() => { if (job.proc === proc) proc.kill('SIGKILL'); }, 5000).unref();
+    }
     return res.json({ ok: true, cancelled: true });
   }
   if (['done', 'error', 'cancelled'].includes(job.status)) {

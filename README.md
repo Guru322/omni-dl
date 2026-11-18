@@ -2,14 +2,18 @@
 
 Express.js REST API for downloading media from **~1,800 sites** (YouTube, Instagram, TikTok, X/Twitter, Reddit, SoundCloud, ...) — the same engine that powers [Seal](https://github.com/junkfood02/Seal): **yt-dlp** (extractors) + **ffmpeg** (merging/converting).
 
+YouTube metadata, media links, and download jobs use `youtube-dl-exec`. It wraps the same `yt-dlp` executable used by the CLI runner for other sites, so the extractor update endpoint applies to both.
+
 ## Setup
 
 ```bash
-brew install yt-dlp ffmpeg     # macOS; or: pipx install yt-dlp
+# Requires Node.js 22 and Python 3.11+ on macOS/Linux
 npm install
 cp .env.example .env           # optional — edit config (auth, cookies, domain, tuning)
 npm start                      # → http://localhost:3000
 ```
+
+If the install environment cannot download the extractor from GitHub, set `YOUTUBE_DL_SKIP_DOWNLOAD=1` during installation and supply a working `yt-dlp` on `PATH` or via `YTDLP_PATH` at runtime.
 
 Config knobs are documented in `.env.example`: `PORT`, `API_KEY`, `COOKIES_FILE`, `MAX_CONCURRENT`, `CLEANUP_MINUTES`, `PUBLIC_BASE`, `LINK_TTL`. Environment variables always work too — `npm start` loads `.env` via `--env-file-if-exists` (skipped if absent).
 
