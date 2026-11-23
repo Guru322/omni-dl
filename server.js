@@ -9,6 +9,7 @@
  *   API_KEY          if set, all requests must send "x-api-key: <key>"
  *   COOKIES_FILE     path to a Netscape-format cookies.txt for auth-only content
  *   FFMPEG_PATH      optional path to an FFmpeg executable
+ *   YTDLP_TMPDIR     directory for yt-dlp's temporary runtime files (default: downloads)
  *   MAX_CONCURRENT   max simultaneous yt-dlp downloads (default 3)
  *   CLEANUP_MINUTES  auto-delete finished jobs' files after N minutes (0 = off, default 60)
  *   PUBLIC_BASE      e.g. https://api.gurusensei.dev — domain used in generated
@@ -37,12 +38,18 @@ const CLEANUP_MINUTES = parseInt(process.env.CLEANUP_MINUTES || '60', 10);
 const PUBLIC_BASE = (process.env.PUBLIC_BASE || '').replace(/\/+$/, '');
 const LINK_TTL = parseInt(process.env.LINK_TTL || '300', 10) * 1000;
 
+const DOWNLOADS_DIR = path.join(__dirname, 'downloads');
+const YTDLP_TMPDIR = path.resolve(process.env.YTDLP_TMPDIR || DOWNLOADS_DIR);
+fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
+if (YTDLP_TMPDIR !== DOWNLOADS_DIR) fs.mkdirSync(YTDLP_TMPDIR, { recursive: true });
+const YTDLP_SPAWN_OPTIONS = { env: { ...process.env, TMPDIR: YTDLP_TMPDIR } };
+
 /* --- toolchain resolution (works on bare PaaS containers) ------------------- */
 const { spawnSync } = require('child_process');
 const os = require('os');
 
-const runnable = (cmd, versionFlag = '--version') => {
-  try { return spawnSync(cmd, [versionFlag], { stdio: 'ignore' }).status === 0; }
+const runnable = (cmd, versionFlag, options) => {
+  try { return spawnSync(cmd, [versionFlag], { ...options, stdio: 'ignore' }).status === 0; }
   catch { return false; }
 };
 
@@ -54,7 +61,7 @@ function pickYtdlp() {
     'yt-dlp',                                        // PATH
     path.join(os.homedir(), '.local', 'bin', 'yt-dlp'),
   ].filter(Boolean);
-  for (const c of cands) if (runnable(c)) return c;
+  for (const c of cands) if (runnable(c, '--version', YTDLP_SPAWN_OPTIONS)) return c;
   return 'yt-dlp'; // last resort; will fail loudly per-request
 }
 
@@ -71,9 +78,6 @@ function pickFfmpeg() {
 const YTDLP = pickYtdlp();
 const youtube = youtubeDl.create(YTDLP);
 const FFMPEG_PATH = pickFfmpeg();
-
-const DOWNLOADS_DIR = path.join(__dirname, 'downloads');
-fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
 
 const app = express();
 app.use(cors());
@@ -212,7 +216,7 @@ function extractorFlags() {
 
 function runYtdlp(args) {
   return new Promise((resolve, reject) => {
-    const proc = spawn(YTDLP, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const proc = spawn(YTDLP, args, { ...YTDLP_SPAWN_OPTIONS, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     proc.stdout.on('data', (d) => { stdout += d; });
@@ -228,7 +232,7 @@ function runYtdlp(args) {
 /* Extract metadata + formats without downloading. */
 async function fetchInfo(url) {
   const flags = { ...extractorFlags(), noProgress: true, dumpSingleJson: true };
-  if (isYouTubeUrl(url)) return youtube(url, flags);
+  if (isYouTubeUrl(url)) return youtube(url, flags, YTDLP_SPAWN_OPTIONS);
   const raw = await runYtdlp([...youtubeDl.args(flags), '--', url]);
   return JSON.parse(raw);
 }
@@ -276,10 +280,10 @@ function formatFlags({ format = 'mp4', quality = 'best' } = {}) {
 
 function startDownload(url, flags) {
   if (isYouTubeUrl(url)) {
-    const proc = youtube.exec(url, flags, { reject: false });
+    const proc = youtube.exec(url, flags, { ...YTDLP_SPAWN_OPTIONS, reject: false });
     return { proc, completed: proc };
   }
-  const proc = spawn(YTDLP, [...youtubeDl.args(flags), '--', url]);
+  const proc = spawn(YTDLP, [...youtubeDl.args(flags), '--', url], YTDLP_SPAWN_OPTIONS);
   const completed = once(proc, 'close').then(([exitCode, signalCode]) => ({ exitCode, signalCode }));
   return { proc, completed };
 }
