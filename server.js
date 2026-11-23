@@ -8,6 +8,7 @@
  *   PORT             default 3000
  *   API_KEY          if set, all requests must send "x-api-key: <key>"
  *   COOKIES_FILE     path to a Netscape-format cookies.txt for auth-only content
+ *   FFMPEG_PATH      optional path to an FFmpeg executable
  *   MAX_CONCURRENT   max simultaneous yt-dlp downloads (default 3)
  *   CLEANUP_MINUTES  auto-delete finished jobs' files after N minutes (0 = off, default 60)
  *   PUBLIC_BASE      e.g. https://api.gurusensei.dev — domain used in generated
@@ -40,8 +41,8 @@ const LINK_TTL = parseInt(process.env.LINK_TTL || '300', 10) * 1000;
 const { spawnSync } = require('child_process');
 const os = require('os');
 
-const runnable = (cmd) => {
-  try { return spawnSync(cmd, ['--version'], { stdio: 'ignore' }).status === 0; }
+const runnable = (cmd, versionFlag = '--version') => {
+  try { return spawnSync(cmd, [versionFlag], { stdio: 'ignore' }).status === 0; }
   catch { return false; }
 };
 
@@ -58,12 +59,13 @@ function pickYtdlp() {
 }
 
 function pickFfmpeg() {
-  if (process.env.FFMPEG_PATH && fs.existsSync(process.env.FFMPEG_PATH)) return process.env.FFMPEG_PATH;
+  const override = process.env.FFMPEG_PATH && path.resolve(process.env.FFMPEG_PATH);
+  if (override && runnable(override, '-version')) return override;
   try {
-    const p = require('ffmpeg-static');              // static binary from npm
-    if (p && fs.existsSync(p)) return p;
+    const bundled = require('ffmpeg-static');
+    if (bundled && runnable(bundled, '-version')) return bundled;
   } catch { }
-  return runnable('ffmpeg') ? 'ffmpeg' : null;
+  return runnable('ffmpeg', '-version') ? 'ffmpeg' : null;
 }
 
 const YTDLP = pickYtdlp();
@@ -204,7 +206,7 @@ function extractorFlags() {
     noColor: true,
     noPlaylist: true,
     ...(COOKIES_FILE && { cookies: COOKIES_FILE }),
-    ...(FFMPEG_PATH && { ffmpegLocation: FFMPEG_PATH }),
+    ...(FFMPEG_PATH && FFMPEG_PATH !== 'ffmpeg' && { ffmpegLocation: FFMPEG_PATH }),
   };
 }
 
